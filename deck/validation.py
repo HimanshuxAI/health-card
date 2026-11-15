@@ -19,8 +19,11 @@ def validate_presentation(prs: Presentation) -> list[str]:
         if index <= len(SLIDES) and SLIDES[index - 1].title not in texts:
             errors.append(f"slide {index}: missing approved title")
 
-        notes_text_frame = slide.notes_slide.notes_text_frame
-        notes = notes_text_frame.text.strip() if notes_text_frame is not None else ""
+        notes = ""
+        if slide.has_notes_slide:
+            notes_text_frame = slide.notes_slide.notes_text_frame
+            if notes_text_frame is not None:
+                notes = notes_text_frame.text.strip()
         if not notes:
             errors.append(f"slide {index}: missing speaker notes")
 

@@ -42,12 +42,11 @@ SLIDES = (
             "Emergency-time penalty",
         ),
         notes=(
-            "During an emergency, the most important facts are often the hardest to "
+            "During an emergency, the most important facts are often hardest to "
             "retrieve. Allergies may sit in one file, medications in another, and "
-            "coverage in a billing system that has not yet been contacted. A "
-            "responder should not need a login, multiple tabs, or a patient’s memory "
-            "to make a safe initial decision. That context gap is the problem this "
-            "project is designed to remove."
+            "coverage in a billing system not yet contacted. A responder should not "
+            "need a login, multiple tabs, or a patient’s memory to make a safe initial "
+            "decision. This context gap is what the project removes."
         ),
     ),
     SlideCopy(
@@ -63,11 +62,10 @@ SLIDES = (
         notes=(
             "The patient card contains a signed token, not sensitive medical data "
             "itself. The public scanner validates that token, verifies its integrity, "
-            "decrypts the stored trauma profile, and returns a compact set of "
-            "responder-critical facts. The API also measures server retrieval time so "
-            "the interface can communicate latency honestly. The design target is "
-            "under 800 milliseconds, with no patient identity exposed before token "
-            "validation."
+            "decrypts the stored trauma profile, and returns compact responder-critical "
+            "facts. The API also measures retrieval time so the interface can communicate "
+            "latency honestly. The design target is under 800 milliseconds, with no patient "
+            "identity exposed before validation."
         ),
     ),
     SlideCopy(
@@ -147,11 +145,10 @@ SLIDES = (
         notes=(
             "A prescription becomes a MedicationRequest, a diagnostic report becomes "
             "a DiagnosticReport, and an itemized bill becomes a FHIR Claim. ABDM "
-            "care-context links and gateway calls are recorded with endpoint, status, "
-            "and latency for auditability. The ABDM and NHCX interfaces are internally "
-            "simulated in this demo so the complete workflow remains deterministic "
-            "and available offline; they are not presented as live government "
-            "connections."
+            "care-context links and gateway calls capture endpoint, status, and latency "
+            "for auditability. The ABDM and NHCX interfaces are internally simulated in "
+            "this demo so the workflow stays deterministic and available offline; they are "
+            "not live government connections."
         ),
     ),
     SlideCopy(
@@ -167,11 +164,10 @@ SLIDES = (
         notes=(
             "Pressing Panic creates one alert and broadcasts it to authenticated "
             "hospital dashboards over WebSocket. The event includes patient identity "
-            "and location coordinates. Registered contacts are then notified by email "
-            "when SMTP is configured. Email failure never blocks the live alert; the "
-            "service records a skipped or failed email status while the hospital feed "
-            "continues to work. This keeps the emergency path resilient to a "
-            "mail-provider outage."
+            "and location coordinates. Registered contacts receive email when SMTP is "
+            "configured. Email failure never blocks the live alert; the service records "
+            "a skipped or failed status while the hospital feed continues. This keeps "
+            "emergency delivery resilient to mail outages."
         ),
     ),
     SlideCopy(
@@ -189,13 +185,12 @@ SLIDES = (
             "One-command Docker startup",
         ),
         notes=(
-            "The project is backed by 19 automated service tests and a 16-step "
-            "end-to-end scenario covering authentication, scanning, records, billing, "
-            "claims, and SOS. Docker Compose starts the frontend, gateway, and five "
-            "services from one command, with seeded data for a repeatable demo. We "
-            "also state the boundaries clearly: government gateways are simulated, "
-            "production hardening is out of scope, and SMTP remains optional for the "
-            "demo."
+            "The project has 19 automated service tests and a 16-step end-to-end "
+            "scenario covering authentication, scanning, records, billing, claims, and "
+            "SOS. Docker Compose starts the frontend, gateway, and five services from "
+            "one command, with seeded data for a repeatable demo. We also state the "
+            "boundaries: government gateways are simulated, production hardening is out "
+            "of scope, and SMTP remains optional."
         ),
     ),
     SlideCopy(
@@ -214,12 +209,12 @@ SLIDES = (
             "Trigger SOS",
         ),
         notes=(
-            "The complete proof is intentionally short: open the patient card, scan "
-            "its QR, write a FHIR-backed record, push an itemized claim, and trigger "
-            "the live SOS feed. The next production steps are a PostgreSQL "
-            "deployment, approval for real ABDM and NHCX sandbox credentials, stronger "
-            "observability, and a controlled clinical pilot. The core contribution is "
-            "already demonstrable as one connected, offline-capable system."
+            "The proof is intentionally short: open the patient card, scan its QR, "
+            "write a FHIR-backed record, push an itemized claim, and trigger the live "
+            "SOS feed. Next production steps are a PostgreSQL deployment, approval for "
+            "real ABDM and NHCX sandbox credentials, stronger observability, and a "
+            "controlled clinical pilot. The core contribution is demonstrable as one "
+            "connected, offline-capable system."
         ),
     ),
 )
