@@ -51,7 +51,10 @@ def new_presentation() -> Presentation:
 def add_slide(
     prs: Presentation, index: int, section: str, *, dark: bool = False
 ) -> SlideFrame:
-    """Add a blank themed slide and return its frame."""
+    """Add a blank themed slide and return its frame.
+
+    ``dark=False`` uses BONE and ``dark=True`` uses BLACK.
+    """
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.background.fill
     background.solid()
@@ -79,7 +82,7 @@ def add_text(
     """Add text.
 
     Geometry and margins are inches, font size is points, and line spacing is a
-    multiplier.
+    multiplier. ``color=None`` selects BONE on dark slides and BLACK otherwise.
     """
     shape = frame.slide.shapes.add_textbox(
         Inches(x), Inches(y), Inches(w), Inches(h)
@@ -151,7 +154,10 @@ def add_line(
     color: RGBColor | None = None,
     width: float = 0.75,
 ) -> Connector:
-    """Add a straight connector with geometry in inches and line width in points."""
+    """Add a straight connector with geometry in inches and line width in points.
+
+    ``color=None`` selects BONE_2 on dark slides and BLACK otherwise.
+    """
     shape = frame.slide.shapes.add_connector(
         MSO_CONNECTOR.STRAIGHT,
         Inches(x1),

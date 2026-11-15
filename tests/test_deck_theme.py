@@ -12,6 +12,9 @@ from pptx.util import Pt
 
 from deck import theme
 from deck.theme import (
+    BLACK,
+    BONE,
+    BONE_2,
     CORAL,
     DISPLAY_FONT,
     add_line,
@@ -80,6 +83,42 @@ def test_add_text_disables_autofit() -> None:
     assert shape.text_frame.auto_size == MSO_AUTO_SIZE.NONE
 
 
+def test_add_slide_uses_bone_by_default_and_black_when_dark() -> None:
+    prs = new_presentation()
+
+    light = add_slide(prs, 1, "light")
+    dark = add_slide(prs, 2, "dark", dark=True)
+
+    assert light.slide.background.fill.fore_color.rgb == BONE
+    assert dark.slide.background.fill.fore_color.rgb == BLACK
+
+
+def test_add_text_defaults_to_bone_on_dark_and_black_otherwise() -> None:
+    prs = new_presentation()
+    light = add_slide(prs, 1, "light")
+    dark = add_slide(prs, 2, "dark", dark=True)
+
+    light_text = add_text(light, "Light", 1, 1, 2, 1)
+    dark_text = add_text(dark, "Dark", 1, 1, 2, 1)
+
+    light_run = light_text.text_frame.paragraphs[0].runs[0]
+    dark_run = dark_text.text_frame.paragraphs[0].runs[0]
+    assert light_run.font.color.rgb == BLACK
+    assert dark_run.font.color.rgb == BONE
+
+
+def test_add_line_defaults_to_bone_2_on_dark_and_black_otherwise() -> None:
+    prs = new_presentation()
+    light = add_slide(prs, 1, "light")
+    dark = add_slide(prs, 2, "dark", dark=True)
+
+    light_line = add_line(light, 1, 1, 2, 1)
+    dark_line = add_line(dark, 1, 1, 2, 1)
+
+    assert light_line.line.color.rgb == BLACK
+    assert dark_line.line.color.rgb == BONE_2
+
+
 def test_theme_helpers_return_actual_pptx_types() -> None:
     frame = add_slide(new_presentation(), 1, "opening")
 
@@ -107,17 +146,32 @@ def test_set_notes_raises_clear_error_when_notes_frame_is_unavailable() -> None:
             set_notes(frame, "Speaker notes")
 
 
-def test_helper_docstrings_document_units_and_line_default() -> None:
+def test_helper_docstrings_document_units_and_color_defaults() -> None:
+    add_slide_doc = (theme.add_slide.__doc__ or "").lower()
     add_text_doc = (theme.add_text.__doc__ or "").lower()
     add_rect_doc = (theme.add_rect.__doc__ or "").lower()
     add_line_doc = (theme.add_line.__doc__ or "").lower()
 
+    assert "dark=false" in add_slide_doc
+    assert "bone" in add_slide_doc
+    assert "dark=true" in add_slide_doc
+    assert "black" in add_slide_doc
     assert "inches" in add_text_doc
     assert "margin" in add_text_doc
     assert "points" in add_text_doc
     assert "multiplier" in add_text_doc
+    assert "color=none" in add_text_doc
+    assert "bone" in add_text_doc
+    assert "black" in add_text_doc
+    assert "dark slides" in add_text_doc
+    assert "otherwise" in add_text_doc
     assert "inches" in add_rect_doc
     assert "points" in add_rect_doc
     assert "fill" in add_rect_doc
     assert "inches" in add_line_doc
     assert "points" in add_line_doc
+    assert "color=none" in add_line_doc
+    assert "bone_2" in add_line_doc
+    assert "black" in add_line_doc
+    assert "dark slides" in add_line_doc
+    assert "otherwise" in add_line_doc
