@@ -1,5 +1,7 @@
-from pptx import Presentation
+import math
+
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.presentation import Presentation
 from pptx.util import Inches
 
 from deck.content import SLIDES
@@ -27,25 +29,52 @@ def validate_presentation(prs: Presentation) -> list[str]:
         if not notes:
             errors.append(f"slide {index}: missing speaker notes")
 
-        slide_xml = slide._element.xml
-        if "<a:gradFill" in slide_xml:
+        slide_element = slide._element
+        if slide_element.xpath(".//a:gradFill"):
             errors.append(f"slide {index}: gradient fill is not allowed")
-        rounded_rectangles += slide_xml.count('prst="roundRect"')
+        rounded_rectangles += len(
+            slide_element.xpath('.//p:spPr/a:prstGeom[@prst="roundRect"]')
+        )
 
         for shape in slide.shapes:
-            if shape.left < -tolerance or shape.top < -tolerance:
+            angle = math.radians(shape.rotation or 0.0)
+            half_width = (
+                abs(shape.width * math.cos(angle))
+                + abs(shape.height * math.sin(angle))
+            ) / 2
+            half_height = (
+                abs(shape.width * math.sin(angle))
+                + abs(shape.height * math.cos(angle))
+            ) / 2
+            center_x = shape.left + shape.width / 2
+            center_y = shape.top + shape.height / 2
+            visible_left = center_x - half_width
+            visible_top = center_y - half_height
+            visible_right = center_x + half_width
+            visible_bottom = center_y + half_height
+
+            if visible_left < -tolerance or visible_top < -tolerance:
                 errors.append(f"slide {index}: shape starts outside the canvas")
-            if shape.left + shape.width > prs.slide_width + tolerance:
+            if visible_right > prs.slide_width + tolerance:
                 errors.append(f"slide {index}: shape exceeds the right canvas edge")
-            if shape.top + shape.height > prs.slide_height + tolerance:
+            if visible_bottom > prs.slide_height + tolerance:
                 errors.append(f"slide {index}: shape exceeds the bottom canvas edge")
 
-        if index in (4, 8):
+        required_pictures = {4: 3, 8: 1}.get(index)
+        if required_pictures is not None:
             pictures = sum(
                 shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in slide.shapes
             )
-            if pictures == 0:
-                errors.append(f"slide {index}: required project screenshot is missing")
+            if pictures != required_pictures:
+                noun = (
+                    "project screenshot"
+                    if required_pictures == 1
+                    else "project screenshots"
+                )
+                errors.append(
+                    f"slide {index}: expected exactly {required_pictures} {noun}, "
+                    f"found {pictures}"
+                )
 
     if rounded_rectangles > 4:
         errors.append(

@@ -16,7 +16,7 @@ SLIDES = (
         index=1,
         section="OPEN",
         title="At 03:12, the ambulance doesn’t need a login.",
-        message="A portable emergency identity that works before an account can be opened.",
+        message="A portable emergency identity that works before a responder login.",
         evidence=(
             "ABDM + NHCX",
             "AES-128-GCM trauma profile",
@@ -25,10 +25,10 @@ SLIDES = (
         notes=(
             "This project turns the ABHA health card into an emergency instrument, "
             "not only a digital identity. The same patient record supports three "
-            "workflows: a responder scanning a signed QR, a hospital writing "
+            "workflows: a responder scanning an opaque QR token, a hospital writing "
             "standards-shaped clinical records, and an administrator tracing claims "
-            "and alerts. The key design choice is that the demonstration remains "
-            "reliable even when external government sandboxes are unavailable."
+            "and alerts. The patient creates the random token from their authenticated "
+            "card; the responder needs no login."
         ),
     ),
     SlideCopy(
@@ -44,7 +44,7 @@ SLIDES = (
         notes=(
             "During an emergency, the most important facts are often hardest to "
             "retrieve. Allergies may sit in one file, medications in another, and "
-            "coverage in a billing system not yet contacted. A responder should not "
+            "coverage in a billing system not yet checked. A responder should not "
             "need a login, multiple tabs, or a patient’s memory to make a safe initial "
             "decision. This context gap is what the project removes."
         ),
@@ -53,19 +53,19 @@ SLIDES = (
         index=3,
         section="SOLUTION",
         title="One scan. The right context. Immediately.",
-        message="A signed QR resolves a minimal, verified trauma profile.",
+        message="An opaque QR token resolves a minimal, verified trauma profile.",
         evidence=(
-            "Signed QR token",
+            "Opaque random QR token",
             "Blood group + allergies + conditions",
             "Retrieval target under 800 ms",
         ),
         notes=(
-            "The patient card contains a signed token, not sensitive medical data "
-            "itself. The public scanner validates that token, verifies its integrity, "
-            "decrypts the stored trauma profile, and returns compact responder-critical "
-            "facts. The API also measures retrieval time so the interface can communicate "
-            "latency honestly. The design target is under 800 milliseconds, with no patient "
-            "identity exposed before validation."
+            "The patient card contains an opaque random lookup token, not sensitive "
+            "medical data itself. The scanner uses that token to find the stored profile, "
+            "then verifies the encrypted profile’s HMAC-SHA256 signature before "
+            "AES-128-GCM decryption. It returns responder-critical facts. The API also "
+            "measures retrieval time so the interface can communicate latency honestly. "
+            "The design target is under 800 milliseconds."
         ),
     ),
     SlideCopy(
@@ -111,21 +111,23 @@ SLIDES = (
         index=6,
         section="SECURITY",
         title="Sealed by default. Opened by need.",
-        message="The emergency path validates integrity before it decrypts anything.",
+        message=(
+            "The emergency path verifies the encrypted stored trauma profile before "
+            "decrypting anything."
+        ),
         evidence=(
-            "Random 32-byte token",
-            "HMAC-SHA256 integrity",
+            "16-byte random QR token",
+            "HMAC verifies encrypted stored trauma profile before decryption",
             "AES-128-GCM encryption",
             "Consent gate",
         ),
         notes=(
-            "The trauma profile is encrypted at rest with AES-128-GCM. Its "
-            "HMAC-SHA256 signature is checked before decryption is attempted, so "
-            "tampered ciphertext is rejected early. The QR carries a random, "
-            "revocable token rather than medical details. Hospital access to "
-            "longitudinal records is separately protected by role checks and consent "
-            "artifacts, allowing consent to be revoked without changing the "
-            "emergency QR profile."
+            "The trauma profile is encrypted with AES-128-GCM. After an opaque random "
+            "token locates it, the server verifies the encrypted trauma profile’s "
+            "HMAC-SHA256 signature before attempting decryption, rejecting tampered "
+            "ciphertext early. The QR carries a revocable 16-byte lookup token, not medical "
+            "details. Records remain protected by role checks and consent artifacts, allowing "
+            "consent revocation without changing the emergency QR profile."
         ),
     ),
     SlideCopy(
@@ -182,15 +184,16 @@ SLIDES = (
             "19 automated tests",
             "16-step E2E scenario",
             "5 services",
-            "One-command Docker startup",
+            "One-command service startup",
         ),
         notes=(
             "The project has 19 automated service tests and a 16-step end-to-end "
             "scenario covering authentication, scanning, records, billing, claims, and "
-            "SOS. Docker Compose starts the frontend, gateway, and five services from "
-            "one command, with seeded data for a repeatable demo. We also state the "
-            "boundaries: government gateways are simulated, production hardening is out "
-            "of scope, and SMTP remains optional."
+            "SOS. Docker Compose starts the gateway and five services plus a seed job for "
+            "seeded data; the Next.js frontend runs separately. We also state the boundaries: "
+            "government "
+            "gateways are simulated, production hardening is out of scope, and SMTP remains "
+            "optional."
         ),
     ),
     SlideCopy(
@@ -198,8 +201,8 @@ SLIDES = (
         section="CLOSE",
         title="A health record that arrives before the ambulance does.",
         message=(
-            "The 60-second proof connects identity, emergency access, clinical "
-            "records, claims, and alerts."
+            "The short proof connects identity, emergency access, clinical records, "
+            "claims, and alerts."
         ),
         evidence=(
             "Open card",

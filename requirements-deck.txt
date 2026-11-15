@@ -1,3 +1,5 @@
 python-pptx==1.0.2
 qrcode[pil]==8.0
 Pillow==11.3.0
+# Real QR decoding for deck asset verification tests.
+zxing-cpp==3.1.1
