@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pptx import Presentation
+from pptx import Presentation as PresentationFactory
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
-from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE, PP_ALIGN
+from pptx.presentation import Presentation
+from pptx.shapes.autoshape import Shape
+from pptx.shapes.connector import Connector
+from pptx.slide import Slide
 from pptx.util import Inches, Pt
 
 SLIDE_W = 13.333
@@ -28,14 +32,17 @@ MONO_FONT = "Courier New"
 
 @dataclass(frozen=True)
 class SlideFrame:
-    slide: object
+    """Theme metadata for one slide."""
+
+    slide: Slide
     index: int
     section: str
     dark: bool = False
 
 
 def new_presentation() -> Presentation:
-    prs = Presentation()
+    """Create a presentation using the theme's 16:9 dimensions."""
+    prs = PresentationFactory()
     prs.slide_width = Inches(SLIDE_W)
     prs.slide_height = Inches(SLIDE_H)
     return prs
@@ -44,6 +51,7 @@ def new_presentation() -> Presentation:
 def add_slide(
     prs: Presentation, index: int, section: str, *, dark: bool = False
 ) -> SlideFrame:
+    """Add a blank themed slide and return its frame."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     background = slide.background.fill
     background.solid()
@@ -67,7 +75,12 @@ def add_text(
     valign: MSO_ANCHOR = MSO_ANCHOR.TOP,
     margin: float = 0.0,
     line_spacing: float = 1.0,
-) -> object:
+) -> Shape:
+    """Add text.
+
+    Geometry and margins are inches, font size is points, and line spacing is a
+    multiplier.
+    """
     shape = frame.slide.shapes.add_textbox(
         Inches(x), Inches(y), Inches(w), Inches(h)
     )
@@ -79,17 +92,23 @@ def add_text(
     text_frame.margin_bottom = Inches(margin)
     text_frame.word_wrap = True
     text_frame.vertical_anchor = valign
+    text_frame.auto_size = MSO_AUTO_SIZE.NONE
 
     paragraph = text_frame.paragraphs[0]
     paragraph.text = text
     paragraph.alignment = align
     paragraph.line_spacing = line_spacing
 
-    run = paragraph.runs[0]
-    run.font.name = font
-    run.font.size = Pt(size)
-    run.font.bold = bold
-    run.font.color.rgb = color or (BONE if frame.dark else BLACK)
+    ink = color if color is not None else (BONE if frame.dark else BLACK)
+    paragraph.font.name = font
+    paragraph.font.size = Pt(size)
+    paragraph.font.bold = bold
+    paragraph.font.color.rgb = ink
+    for run in paragraph.runs:
+        run.font.name = font
+        run.font.size = Pt(size)
+        run.font.bold = bold
+        run.font.color.rgb = ink
     return shape
 
 
@@ -104,7 +123,11 @@ def add_rect(
     line: RGBColor | None = None,
     width: float = 0.75,
     radius: bool = False,
-) -> object:
+) -> Shape:
+    """Add a rectangle.
+
+    Geometry is inches, line width is points, and ``line=None`` uses fill color.
+    """
     shape_type = MSO_SHAPE.ROUNDED_RECTANGLE if radius else MSO_SHAPE.RECTANGLE
     shape = frame.slide.shapes.add_shape(
         shape_type, Inches(x), Inches(y), Inches(w), Inches(h)
@@ -127,7 +150,8 @@ def add_line(
     *,
     color: RGBColor | None = None,
     width: float = 0.75,
-) -> object:
+) -> Connector:
+    """Add a straight connector with geometry in inches and line width in points."""
     shape = frame.slide.shapes.add_connector(
         MSO_CONNECTOR.STRAIGHT,
         Inches(x1),
@@ -141,6 +165,7 @@ def add_line(
 
 
 def add_footer(frame: SlideFrame) -> None:
+    """Add the standard footer, slide number, and separator rule."""
     ink = BONE if frame.dark else BLACK
     add_text(
         frame,
@@ -169,4 +194,8 @@ def add_footer(frame: SlideFrame) -> None:
 
 
 def set_notes(frame: SlideFrame, notes: str) -> None:
-    frame.slide.notes_slide.notes_text_frame.text = notes.strip()
+    """Attach trimmed speaker notes to the slide."""
+    notes_text_frame = frame.slide.notes_slide.notes_text_frame
+    if notes_text_frame is None:
+        raise RuntimeError(f"Slide {frame.index} notes text frame is unavailable.")
+    notes_text_frame.text = notes.strip()
