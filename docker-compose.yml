@@ -1,0 +1,117 @@
+services:
+  gateway:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - identity
+      - records
+      - abdm
+      - nhcx
+      - sos
+    restart: unless-stopped
+
+  identity:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /srv/services/identity
+    ports:
+      - "8001:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-me}
+      - SHARED_TOKEN=${SHARED_TOKEN:-internal-demo-token}
+    volumes:
+      - ./services:/srv/services
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  records:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /srv/services/records
+    ports:
+      - "8002:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-me}
+      - SHARED_TOKEN=${SHARED_TOKEN:-internal-demo-token}
+      - IDENTITY_URL=http://identity:8000
+    volumes:
+      - ./services:/srv/services
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  abdm:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /srv/services/abdm
+    ports:
+      - "8003:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-me}
+      - SHARED_TOKEN=${SHARED_TOKEN:-internal-demo-token}
+    volumes:
+      - ./services:/srv/services
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nhcx:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /srv/services/nhcx
+    ports:
+      - "8004:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-me}
+      - SHARED_TOKEN=${SHARED_TOKEN:-internal-demo-token}
+      - ABDM_URL=http://abdm:8000
+    volumes:
+      - ./services:/srv/services
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  sos:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /srv/services/sos
+    ports:
+      - "8005:8000"
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-demo-secret-change-me}
+      - SHARED_TOKEN=${SHARED_TOKEN:-internal-demo-token}
+      - RECORDS_URL=http://records:8000
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SOS_FROM_EMAIL=${SOS_FROM_EMAIL:-}
+    volumes:
+      - ./services:/srv/services
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
