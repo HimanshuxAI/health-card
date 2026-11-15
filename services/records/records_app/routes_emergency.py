@@ -1,15 +1,15 @@
 import json
 import secrets
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
-from app import models
-from app.deps import get_db, get_current_user, UserClaim
+from records_app import models
+from records_app.deps import get_db, get_current_user, UserClaim
 from services.shared.config import SHARED_TOKEN
-from app.crypto import seal, unseal
+from records_app.crypto import seal, unseal
 
 router = APIRouter()
 
@@ -56,7 +56,7 @@ def save_emergency_profile(
     p.chronic_conditions = json.dumps(body.get("chronic_conditions", []))
     p.medications = json.dumps(body.get("medications", []))
     p.emergency_contacts = json.dumps(body.get("emergency_contacts", []))
-    p.updated_at = datetime.utcnow()
+    p.updated_at = datetime.now(timezone.utc)
     db.commit()
 
     # Re-seal the trauma profile every time the profile changes.
@@ -68,7 +68,7 @@ def save_emergency_profile(
     tp.encrypted_blob = data_hex
     tp.nonce = nonce_hex
     tp.hmac_sha256 = sig
-    tp.updated_at = datetime.utcnow()
+    tp.updated_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True, "updated_at": tp.updated_at.isoformat()}
 
@@ -113,7 +113,7 @@ def resolve_token(token: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Trauma profile failed integrity check")
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    return {"profile": profile, "retrieved_in_ms": elapsed_ms, "resolved_at": datetime.utcnow().isoformat()}
+    return {"profile": profile, "retrieved_in_ms": elapsed_ms, "resolved_at": datetime.now(timezone.utc).isoformat()}
 
 
 @router.get("/internal/profile/{patient_id}")

@@ -1,15 +1,15 @@
 """Seed the ABDM service: care contexts and integration trace logs."""
 
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root
 
-from app import models
-from app.main import engine, SessionLocal
+from abdm_app import models
+from abdm_app.main import engine, SessionLocal
 from services.shared.db import Base
 
 TRACE = [
@@ -27,7 +27,7 @@ def seed():
     if db.query(models.AbdmLog).first():
         print("abdm: already seeded")
         return
-    base = datetime.utcnow() - timedelta(hours=6)
+    base = datetime.now(timezone.utc) - timedelta(hours=6)
     for i, (direction, endpoint, payload, status, latency) in enumerate(TRACE):
         db.add(
             models.AbdmLog(

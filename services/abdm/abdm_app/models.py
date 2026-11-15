@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -13,14 +13,14 @@ class CareContext(Base):
     patient_id: Mapped[int] = mapped_column(index=True)
     record_ref: Mapped[str] = mapped_column(String(200))
     status: Mapped[str] = mapped_column(String(20), default="LINKED")  # LINKED|CONSENT_PENDING|ACTIVE
-    linked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    linked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
 
 class AbdmLog(Base):
     __tablename__ = "abdm_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc), index=True)
     direction: Mapped[str] = mapped_column(String(4))  # IN | OUT
     endpoint: Mapped[str] = mapped_column(String(200))
     payload_snippet: Mapped[str] = mapped_column(Text, default="")

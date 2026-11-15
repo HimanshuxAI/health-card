@@ -6,8 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root (services.shared)
 
-from app import models
-from app.main import engine, SessionLocal
+from identity_app import models
+from identity_app.main import engine, SessionLocal
 from services.shared.db import Base
 from services.shared import security
 

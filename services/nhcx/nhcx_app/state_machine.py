@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from app.models import Bill
+from nhcx_app.models import Bill
 
 TRANSITIONS: dict[str, list[str]] = {
     "SUBMITTED": ["ADJUDICATED"],

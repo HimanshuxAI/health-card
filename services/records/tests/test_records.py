@@ -1,15 +1,21 @@
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
+_TEST_DB = os.path.join(tempfile.gettempdir(), "abha_records_test.db")
+if os.path.exists(_TEST_DB):
+    os.remove(_TEST_DB)
+os.environ["RECORDS_DB"] = _TEST_DB
+
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.crypto import seal  # noqa: E402
+from records_app.crypto import seal  # noqa: E402
 
 from services.shared import security  # noqa: E402
 
-from app.main import app  # noqa: E402
+from records_app.main import app  # noqa: E402
 
 client = TestClient(app)
 

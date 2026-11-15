@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -17,7 +17,7 @@ class PatientProfile(Base):
     chronic_conditions: Mapped[str] = mapped_column(Text, default="[]")
     medications: Mapped[str] = mapped_column(Text, default="[]")
     emergency_contacts: Mapped[str] = mapped_column(Text, default="[]")  # JSON [{name, phone, relation}]
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
 
 class HealthRecord(Base):
@@ -29,7 +29,7 @@ class HealthRecord(Base):
     title: Mapped[str] = mapped_column(String(200))
     fhir_json: Mapped[str] = mapped_column(Text, default="{}")
     created_by: Mapped[int] = mapped_column(default=0)     # hospital user id
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
 
 class TraumaProfile(Base):
@@ -40,7 +40,7 @@ class TraumaProfile(Base):
     encrypted_blob: Mapped[str] = mapped_column(Text)      # hex: ciphertext(16) || tag(16)
     nonce: Mapped[str] = mapped_column(String(24))         # hex
     hmac_sha256: Mapped[str] = mapped_column(String(64))
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
 
 class QrToken(Base):
@@ -50,4 +50,4 @@ class QrToken(Base):
     patient_id: Mapped[int] = mapped_column(index=True)
     token: Mapped[str] = mapped_column(String(80), unique=True, index=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))

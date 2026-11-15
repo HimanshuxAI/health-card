@@ -2,15 +2,15 @@
 
 import json
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root
 
-from app import models
-from app.main import engine, SessionLocal
+from sos_app import models
+from sos_app.main import engine, SessionLocal
 from services.shared.db import Base
 
 ALERTS = [
@@ -37,7 +37,7 @@ def seed():
                 location_label=label,
                 notified_contacts=json.dumps(contacts),
                 email_status=email_status,
-                created_at=datetime.utcnow() - timedelta(hours=hours_ago),
+                created_at=datetime.now(timezone.utc) - timedelta(hours=hours_ago),
             )
         )
     db.commit()

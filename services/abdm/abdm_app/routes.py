@@ -4,8 +4,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import models
-from app.deps import get_db, get_current_user, UserClaim
+from abdm_app import models
+from abdm_app.deps import get_db, get_current_user, UserClaim
 
 router = APIRouter()
 
@@ -99,7 +99,7 @@ def fhir_convert(
 
     Body: record {id,type,title,created_at,details,hospital_name}, patient {abha_id,name}
     """
-    from app import fhir_builder
+    from abdm_app import fhir_builder
 
     if user.role not in ("hospital", "admin"):
         raise HTTPException(status_code=403, detail="Only hospitals convert records")

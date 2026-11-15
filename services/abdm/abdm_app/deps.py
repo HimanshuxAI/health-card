@@ -18,7 +18,7 @@ class UserClaim:
 
 
 def get_db():
-    from app.main import SessionLocal
+    from abdm_app.main import SessionLocal
 
     db = SessionLocal()
     try:

@@ -4,16 +4,16 @@ import json
 import secrets
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root
 
-from app import models
-from app.main import engine, SessionLocal
-from app.crypto import seal
+from records_app import models
+from records_app.main import engine, SessionLocal
+from records_app.crypto import seal
 from services.shared.db import Base
 
 IDENTITY_DB = Path(__file__).parent.parent / "identity" / "identity.db"
@@ -100,7 +100,7 @@ def seed():
             chronic_conditions=json.dumps(p["chronic_conditions"]),
             medications=json.dumps(p["medications"]),
             emergency_contacts=json.dumps(p["emergency_contacts"]),
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
         )
         db.add(prof)
         data_hex, nonce_hex, sig = seal(
@@ -116,7 +116,7 @@ def seed():
         )
         db.add(
             models.TraumaProfile(
-                patient_id=uid, encrypted_blob=data_hex, nonce=nonce_hex, hmac_sha256=sig, updated_at=datetime.utcnow()
+                patient_id=uid, encrypted_blob=data_hex, nonce=nonce_hex, hmac_sha256=sig, updated_at=datetime.now(timezone.utc)
             )
         )
         db.add(models.QrToken(patient_id=uid, token=secrets.token_hex(16), active=True))
@@ -124,7 +124,7 @@ def seed():
     for patient_email, hospital_email, rtype, title, details in RECORDS:
         uid = users[patient_email]["id"]
         hid = users[hospital_email]["id"]
-        from app.fhir_local import build_record_fhir
+        from records_app.fhir_local import build_record_fhir
 
         fhir = build_record_fhir(rtype, title, details, PROFILES.get(patient_email, {}).get("full_name", ""), users[patient_email]["abha_id"] or "")
         db.add(models.HealthRecord(patient_id=uid, type=rtype, title=title, fhir_json=fhir, created_by=hid))

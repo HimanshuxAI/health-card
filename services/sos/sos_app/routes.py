@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.websockets import WebSocket
 from sqlalchemy.orm import Session
 
-from app import models
-from app.deps import get_db, get_current_user, UserClaim
-from app.mailer import send_alert_email
-from app.ws import manager
+from sos_app import models
+from sos_app.deps import get_db, get_current_user, UserClaim
+from sos_app.mailer import send_alert_email
+from sos_app.ws import manager
 
 router = APIRouter()
 RECORDS_URL = os.getenv("RECORDS_URL", "http://127.0.0.1:8002")

@@ -1,4 +1,4 @@
-from app.crypto import seal, unseal
+from records_app.crypto import seal, unseal
 
 
 def test_round_trip():
@@ -24,7 +24,7 @@ def test_tampered_ciphertext_rejected():
 
 def test_sig_is_hmac_of_ciphertext():
     import hashlib, hmac
-    from app.crypto import KEY
+    from records_app.crypto import KEY
 
     payload = {"b": 2}
     data_hex, nonce_hex, sig = seal(payload)

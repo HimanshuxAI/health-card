@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,7 +18,7 @@ class User(Base):
     phone: Mapped[str | None] = mapped_column(String(15), nullable=True)
     hospital_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow
+        DateTime, default=datetime.now(timezone.utc)
     )
 
 
@@ -30,5 +30,5 @@ class ConsentArtifact(Base):
     hospital_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     scope: Mapped[str] = mapped_column(String(200), default="records.read")
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE")  # ACTIVE | REVOKED
-    granted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    granted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

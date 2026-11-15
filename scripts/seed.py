@@ -4,12 +4,14 @@
 Run from the repo root:  python scripts/seed.py
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PYTHON = str(ROOT / ".venv" / "bin" / "python")
+VENV_PY = ROOT / ".venv" / "bin" / "python"
+PYTHON = str(VENV_PY) if VENV_PY.exists() else sys.executable
 
 ORDER = ["identity", "records", "abdm", "nhcx", "sos"]
 
@@ -21,6 +23,7 @@ def main():
             cwd=ROOT / "services" / svc,
             capture_output=True,
             text=True,
+            env={**os.environ, "PYTHONPATH": str(ROOT / "services")},
         )
         out = (r.stdout + r.stderr).strip()
         tag = out.splitlines()[-1] if out else svc

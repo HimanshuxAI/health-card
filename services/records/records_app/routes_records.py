@@ -4,9 +4,9 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app import models
-from app.deps import get_db, get_current_user, UserClaim
-from app.fhir_local import build_record_fhir
+from records_app import models
+from records_app.deps import get_db, get_current_user, UserClaim
+from records_app.fhir_local import build_record_fhir
 
 router = APIRouter()
 IDENTITY_URL = os.getenv("IDENTITY_URL", "http://127.0.0.1:8001")

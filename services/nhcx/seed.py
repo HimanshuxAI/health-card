@@ -3,16 +3,16 @@
 import json
 import sqlite3
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root
 
-from app import models
-from app.main import engine, SessionLocal
-from app.state_machine import build_fhir_claim
+from nhcx_app import models
+from nhcx_app.main import engine, SessionLocal
+from nhcx_app.state_machine import build_fhir_claim
 from services.shared.db import Base
 
 IDENTITY_DB = Path(__file__).parent.parent / "identity" / "identity.db"
@@ -54,7 +54,7 @@ def seed():
             patient_abha_id=p["abha_id"] or "",
             line_items=json.dumps([{"description": d, "amount": a} for d, a in items]),
             total=float(total),
-            created_at=datetime.utcnow() - timedelta(days=1),
+            created_at=datetime.now(timezone.utc) - timedelta(days=1),
         )
         db.add(bill)
         db.commit()
@@ -69,7 +69,7 @@ def seed():
                     if status == "APPROVED"
                     else "Partially approved: 60% of itemized amount covered."
                 )
-            claim.adjudicated_at = datetime.utcnow() - timedelta(hours=5)
+            claim.adjudicated_at = datetime.now(timezone.utc) - timedelta(hours=5)
             db.add(claim)
             db.commit()
             db.refresh(claim)

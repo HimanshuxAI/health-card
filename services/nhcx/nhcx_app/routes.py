@@ -1,14 +1,14 @@
 import asyncio
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import models
-from app.deps import get_db, get_current_user, UserClaim
-from app.state_machine import build_fhir_claim, can_transition
+from nhcx_app import models
+from nhcx_app.deps import get_db, get_current_user, UserClaim
+from nhcx_app.state_machine import build_fhir_claim, can_transition
 
 router = APIRouter()
 ABDM_URL = os.getenv("ABDM_URL", "http://127.0.0.1:8003")
@@ -134,7 +134,7 @@ async def adjudicate(claim_id: int, user: UserClaim = Depends(get_current_user),
         claim.approved_amount = 0.0
         claim.out_of_pocket = bill.total
         claim.insurer_note = "Rejected: exceeds coverage limit for itemized claim."
-    claim.adjudicated_at = datetime.utcnow()
+    claim.adjudicated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(claim)
 

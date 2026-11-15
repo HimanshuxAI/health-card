@@ -4,7 +4,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import models  # noqa: F401
+from identity_app import models  # noqa: F401
 from services.shared.db import Base, make_db
 
 DB_PATH = os.getenv("IDENTITY_DB", "identity.db")
@@ -27,7 +27,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.routes import router  # noqa: E402
+from identity_app.routes import router  # noqa: E402
 
 app.include_router(router)
 

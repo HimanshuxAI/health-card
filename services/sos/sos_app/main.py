@@ -4,10 +4,10 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app import models  # noqa: F401
+from sos_app import models  # noqa: F401
 from services.shared.db import Base, make_db
 
-DB_PATH = os.getenv("RECORDS_DB", "records.db")
+DB_PATH = os.getenv("SOS_DB", "sos.db")
 engine, SessionLocal = make_db(DB_PATH)
 Base.metadata.create_all(bind=engine)
 
@@ -18,16 +18,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="records-service", lifespan=lifespan)
+app = FastAPI(title="sos-service", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-from app.routes_records import router as records_router  # noqa: E402
-from app.routes_emergency import router as emergency_router  # noqa: E402
+from sos_app.routes import router  # noqa: E402
 
-app.include_router(records_router)
-app.include_router(emergency_router)
+app.include_router(router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "records"}
+    return {"status": "ok", "service": "sos"}

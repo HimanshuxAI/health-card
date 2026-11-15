@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import models, schemas
-from app.deps import get_db, get_current_user
+from identity_app import models, schemas
+from identity_app.deps import get_db, get_current_user
 from services.shared import security
 
 router = APIRouter()
@@ -130,7 +130,7 @@ def grant_consent(
         patient_id=body.patient_id,
         hospital_id=body.hospital_id,
         scope=body.scope,
-        expires_at=datetime.utcnow() + timedelta(days=30),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
     )
     db.add(artifact)
     db.commit()

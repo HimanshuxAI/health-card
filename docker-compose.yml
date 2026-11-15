@@ -13,11 +13,33 @@ services:
       - sos
     restart: unless-stopped
 
+  seed:
+    build:
+      context: .
+      dockerfile: services/Dockerfile.service
+    command: python scripts/seed.py
+    working_dir: /srv
+    volumes:
+      - ./services:/srv/services
+      - ./scripts:/srv/scripts:ro
+    depends_on:
+      identity:
+        condition: service_healthy
+      records:
+        condition: service_healthy
+      abdm:
+        condition: service_healthy
+      nhcx:
+        condition: service_healthy
+      sos:
+        condition: service_healthy
+    restart: "no"
+
   identity:
     build:
       context: .
       dockerfile: services/Dockerfile.service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn identity_app.main:app --host 0.0.0.0 --port 8000
     working_dir: /srv/services/identity
     ports:
       - "8001:8000"
@@ -36,7 +58,7 @@ services:
     build:
       context: .
       dockerfile: services/Dockerfile.service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn records_app.main:app --host 0.0.0.0 --port 8000
     working_dir: /srv/services/records
     ports:
       - "8002:8000"
@@ -46,6 +68,7 @@ services:
       - IDENTITY_URL=http://identity:8000
     volumes:
       - ./services:/srv/services
+      - ./scripts:/srv/scripts:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s
@@ -56,7 +79,7 @@ services:
     build:
       context: .
       dockerfile: services/Dockerfile.service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn abdm_app.main:app --host 0.0.0.0 --port 8000
     working_dir: /srv/services/abdm
     ports:
       - "8003:8000"
@@ -75,7 +98,7 @@ services:
     build:
       context: .
       dockerfile: services/Dockerfile.service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn nhcx_app.main:app --host 0.0.0.0 --port 8000
     working_dir: /srv/services/nhcx
     ports:
       - "8004:8000"
@@ -95,7 +118,7 @@ services:
     build:
       context: .
       dockerfile: services/Dockerfile.service
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn sos_app.main:app --host 0.0.0.0 --port 8000
     working_dir: /srv/services/sos
     ports:
       - "8005:8000"

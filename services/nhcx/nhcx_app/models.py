@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Float, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,7 +15,7 @@ class Bill(Base):
     patient_abha_id: Mapped[str] = mapped_column(String(14), default="")
     line_items: Mapped[str] = mapped_column(Text, default="[]")  # JSON [{description, amount}]
     total: Mapped[float] = mapped_column(Float, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))
 
 
 class Claim(Base):
@@ -29,4 +29,4 @@ class Claim(Base):
     approved_amount: Mapped[float] = mapped_column(Float, default=0.0)
     out_of_pocket: Mapped[float] = mapped_column(Float, default=0.0)
     adjudicated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now(timezone.utc))

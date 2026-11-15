@@ -1,11 +1,18 @@
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
+# Isolated test database so runs are repeatable.
+_TEST_DB = os.path.join(tempfile.gettempdir(), "abha_identity_test.db")
+if os.path.exists(_TEST_DB):
+    os.remove(_TEST_DB)
+os.environ["IDENTITY_DB"] = _TEST_DB
+
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.main import app  # noqa: E402
+from identity_app.main import app  # noqa: E402
 
 client = TestClient(app)
 
