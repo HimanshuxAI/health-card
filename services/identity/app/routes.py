@@ -192,6 +192,7 @@ def check_consent(
     return {
         "granted": True,
         "patient_name": patient.name if patient else None,
+        "patient_abha_id": patient.abha_id if patient else None,
         "hospital_name": hospital.name if hospital else None,
         "scope": active.scope,
     }
