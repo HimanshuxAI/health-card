@@ -1,0 +1,37 @@
+from contextlib import asynccontextmanager
+import os
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from identity_app import models  # noqa: F401
+from services.shared.db import Base, make_db
+
+DB_PATH = os.getenv("IDENTITY_DB", "identity.db")
+engine, SessionLocal = make_db(DB_PATH)
+Base.metadata.create_all(bind=engine)  # idempotent; also covers test clients that skip lifespan
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="identity-service", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from identity_app.routes import router  # noqa: E402
+
+app.include_router(router)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "identity"}

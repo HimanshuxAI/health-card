@@ -1,0 +1,6 @@
+FROM python:3.13-slim
+WORKDIR /srv
+COPY requirements.txt /srv/requirements.txt
+RUN pip install --no-cache-dir -r /srv/requirements.txt
+ENV PYTHONPATH=/srv/services:/srv
+ENV PYTHONUNBUFFERED=1
