@@ -129,3 +129,60 @@ def test_consent_flow():
         "/consents/check", params={"patient_id": pid, "hospital_id": hid}, headers={"Authorization": f"Bearer {htok}"}
     )
     assert r5.status_code == 403
+
+
+def test_consented_patient_listing():
+    """A hospital may only list patients that granted it an ACTIVE consent."""
+    rp = client.post(
+        "/register",
+        json={"name": "Pat Visible", "email": "pv@example.com", "password": "pw123456", "role": "patient"},
+    )
+    client.post(
+        "/register",
+        json={"name": "Pat Hidden", "email": "ph@example.com", "password": "pw123456", "role": "patient"},
+    )
+    rh = client.post(
+        "/register",
+        json={
+            "name": "Hosp Visible",
+            "email": "hv@example.com",
+            "password": "pw123456",
+            "role": "hospital",
+            "hospital_name": "Visible Hospital",
+        },
+    )
+    ptok = rp.json()["access_token"]
+    pid = rp.json()["user_id"]
+    htok = rh.json()["access_token"]
+    hid = rh.json()["user_id"]
+
+    # the visible patient completes eKYC so an ABHA id is linked to the account
+    client.post(
+        "/ekyc/verify", json={"abha_id": "11112222333344"}, headers={"Authorization": f"Bearer {ptok}"}
+    )
+
+    # no consent yet -> nothing visible
+    r = client.get("/patients", headers={"Authorization": f"Bearer {htok}"})
+    assert r.status_code == 200
+    assert r.json()["patients"] == []
+
+    # grant consent for one patient only
+    r2 = client.post("/consents", json={"patient_id": pid, "hospital_id": hid}, headers={"Authorization": f"Bearer {ptok}"})
+    assert r2.status_code == 200
+
+    r3 = client.get("/patients", headers={"Authorization": f"Bearer {htok}"})
+    assert [p["name"] for p in r3.json()["patients"]] == ["Pat Visible"]
+    assert r3.json()["patients"][0]["abha_id"] == "11112222333344"
+
+    # a patient only ever sees themselves
+    r4 = client.get("/patients", headers={"Authorization": f"Bearer {ptok}"})
+    assert [p["name"] for p in r4.json()["patients"]] == ["Pat Visible"]
+
+    # consent rows carry the hospital name, not just its id
+    r5 = client.get("/consents", headers={"Authorization": f"Bearer {ptok}"})
+    assert r5.json()["consents"][0]["hospital_name"] == "Visible Hospital"
+
+    # revoking removes the patient from the hospital's list immediately
+    client.post(f"/consents/{r2.json()['id']}/revoke", headers={"Authorization": f"Bearer {ptok}"})
+    r6 = client.get("/patients", headers={"Authorization": f"Bearer {htok}"})
+    assert r6.json()["patients"] == []

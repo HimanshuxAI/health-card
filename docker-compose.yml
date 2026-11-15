@@ -11,6 +11,22 @@ services:
       - abdm
       - nhcx
       - sos
+      - frontend
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        API_GATEWAY_URL: http://gateway:80
+    environment:
+      - API_GATEWAY_URL=http://gateway:80
+      - NEXT_PUBLIC_API_BASE=
+      - NEXT_PUBLIC_WS_URL=ws://localhost/api/sos/ws
+      - NEXT_TELEMETRY_DISABLED=1
+    ports:
+      - "3000:3000"
     restart: unless-stopped
 
   seed:

@@ -48,11 +48,18 @@ endpoints — the demo runs fully offline and never depends on government sandbo
 docker compose up --build
 ```
 
-- Frontend: http://localhost:3000
-- API gateway: http://localhost (routes `/api/*`)
+- Single entry point: http://localhost (the NGINX gateway serves the frontend and proxies `/api/*`, including the WebSocket upgrade for the live SOS feed)
+- Frontend directly: http://localhost:3000
 - Services: identity 8001 · records 8002 · abdm 8003 · nhcx 8004 · sos 8005
 
-Seed data runs automatically on first boot.
+Seed data runs automatically on first boot: 9 demo accounts, 6 emergency profiles, 10 records,
+5 bills, claims in varied states and 3 historical SOS alerts. To reset the demo data:
+
+```bash
+docker compose stop identity records abdm nhcx sos
+docker compose run --rm --no-deps seed python scripts/seed.py --reset
+docker compose up -d
+```
 
 ### Option B — no Docker
 
@@ -113,11 +120,11 @@ Password for every account: `abha1234`
 
 | Synopsis module | Implementation |
 |---|---|
-| Hardware & Encryption Module | `services/records/app/crypto.py` — AES-128-GCM + HMAC-SHA256, signed QR tokens (`services/records/app/routes_emergency.py`) |
-| Mobile Client & Emergency SOS | `frontend/app/patient`, `frontend/app/hospital`, `frontend/app/scan` + `services/sos` (WebSocket broadcast, GPS tag, SMTP email) |
-| ABDM & FHIR Interoperability Engine | `services/abdm/app/fhir_builder.py` (HL7 FHIR v4), sandbox simulator, integration trace log |
-| NHCX Claims Synchronization Hub | `services/nhcx/app/state_machine.py` — bill → FHIR `Claim`, adjudication state machine, out-of-pocket estimation |
-| Authentication | `services/identity` — bcrypt hashing, JWT with role claims, RBAC per service, ABHA eKYC simulation, consent artifacts |
+| Hardware & Encryption Module | `services/records/records_app/crypto.py` — AES-128-GCM + HMAC-SHA256, signed QR tokens (`services/records/records_app/routes_emergency.py`) |
+| Mobile Client & Emergency SOS | `frontend/app/patient`, `frontend/app/hospital`, `frontend/app/scan` + `services/sos/sos_app` (WebSocket broadcast, GPS tag, SMTP email) |
+| ABDM & FHIR Interoperability Engine | `services/abdm/abdm_app/fhir_builder.py` (HL7 FHIR v4), sandbox simulator, integration trace log |
+| NHCX Claims Synchronization Hub | `services/nhcx/nhcx_app/state_machine.py` — bill → FHIR `Claim`, adjudication state machine, out-of-pocket estimation |
+| Authentication | `services/identity/identity_app` — bcrypt hashing, JWT with role claims, RBAC per service, ABHA eKYC simulation, consent artifacts |
 
 ---
 
@@ -146,6 +153,20 @@ SOS_FROM_EMAIL=you@gmail.com
 
 Without SMTP settings, alerts still fire over WebSocket and the email status shows
 `SKIPPED` — the demo never breaks because of a mail outage.
+
+---
+
+## Known limitations (demo scope)
+
+- **QR capture is by token, not camera.** The public scanner accepts the signed token
+  pasted from the QR payload; there is no `getUserMedia` camera decode in the web build.
+- **Emergency contact notification is email only.** No SMS/SMS gateway is wired up; the
+  contact list is rendered with tap-to-call links for a responder on a phone.
+- **ABDM and NHCX are simulated in-process.** The service endpoints mirror the real
+  gateway shapes (FHIR v4 resources, consent artifacts, claim state machine) but do not
+  call the government sandboxes.
+- **SQLite, single node.** Each service owns its own file; there is no cross-service
+  transaction, distributed tracing or event bus beyond the WebSocket broadcast.
 
 ---
 

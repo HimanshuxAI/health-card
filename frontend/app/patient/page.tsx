@@ -40,6 +40,7 @@ type ClaimRow = {
 type ConsentRow = {
   id: number;
   hospital_id: number;
+  hospital_name?: string | null;
   scope: string;
   granted_at: string;
 };
@@ -431,7 +432,7 @@ function Consents() {
         ) : (
           consents.map((c) => (
             <Row key={c.id}>
-              <div className="text-sm font-medium">Hospital #{c.hospital_id}</div>
+              <div className="text-sm font-medium">{c.hospital_name ?? `Hospital #${c.hospital_id}`}</div>
               <Badge tone="green">{c.scope}</Badge>
               <span className="mono text-[10px] text-stone">granted {new Date(c.granted_at).toLocaleDateString()}</span>
               <button className="btn btn-outline ml-auto" onClick={() => revoke(c.id)}>Revoke</button>

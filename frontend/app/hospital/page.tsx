@@ -71,6 +71,18 @@ export default function HospitalHome() {
 type ClaimRow = { id: number; bill_id: number; patient_id: number; total: number; status: string; insurer_note: string; out_of_pocket: number };
 type AlertRow = { id: number; patient_id: number; patient_name: string; trigger: string; lat: number | null; lng: number | null; location_label: string; email_status: string; created_at: string };
 type PatientRow = { id: number; patient_id: number; patient_name: string; patient_abha_id: string; total: number; created_at: string };
+type ConsentPatient = { id: number; name: string; abha_id: string | null; phone: string | null };
+
+function useConsentedPatients() {
+  const { session } = useAuth();
+  const [patients, setPatients] = useState<ConsentPatient[]>([]);
+  useEffect(() => {
+    apiFetch<{ patients: ConsentPatient[] }>("/api/identity/patients", { token: session?.access_token })
+      .then((r) => setPatients(r.patients))
+      .catch(() => setPatients([]));
+  }, [session]);
+  return patients;
+}
 
 function useClaims() {
   const { session } = useAuth();
@@ -248,16 +260,12 @@ function ScanPatient({ onErr }: { onErr: (s: string) => void }) {
 
 function NewRecord({ onErr }: { onErr: (s: string) => void }) {
   const { session } = useAuth();
-  const [patients, setPatients] = useState<PatientRow[]>([]);
+  const patients = useConsentedPatients();
   const [form, setForm] = useState({ patient_id: "", type: "Prescription", title: "", dosage: "", conclusion: "" });
   const [fhir, setFhir] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    apiFetch<{ bills: PatientRow[] }>("/api/nhcx/bills", { token: session?.access_token }).then((r) => setPatients(r.bills)).catch(() => {});
-  }, [session]);
-
-  const uniquePatients = Array.from(new Map(patients.map((p) => [p.patient_id, p])).values());
+  const selected = patients.find((p) => String(p.id) === form.patient_id);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -281,7 +289,7 @@ function NewRecord({ onErr }: { onErr: (s: string) => void }) {
         token: session?.access_token,
         body: {
           record: { id: r.id, type: form.type, title: form.title },
-          patient: { abha_id: "linked-via-consent", name: "Patient" },
+          patient: { abha_id: selected?.abha_id ?? "", name: selected?.name ?? "" },
           patient_user_id: Number(form.patient_id),
         },
       });
@@ -302,11 +310,13 @@ function NewRecord({ onErr }: { onErr: (s: string) => void }) {
             <label className="field-label">Patient (consent-granting)</label>
             <select className="input" value={form.patient_id} onChange={(e) => setForm({ ...form, patient_id: e.target.value })} required>
               <option value="">Select patient</option>
-              {uniquePatients.map((p) => (
-                <option key={p.patient_id} value={p.patient_id}>#{p.patient_id} — {p.patient_name}</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — {p.abha_id ?? `id ${p.id}`}
+                </option>
               ))}
             </select>
-            {!uniquePatients.length && <p className="text-xs text-stone mt-1">Patients appear here after consent is granted and a bill exists.</p>}
+            {!patients.length && <p className="text-xs text-stone mt-1">No patient has granted this hospital consent yet.</p>}
           </div>
           <div>
             <label className="field-label">Type</label>
@@ -349,12 +359,15 @@ function NewRecord({ onErr }: { onErr: (s: string) => void }) {
 
 function Billing({ onErr }: { onErr: (s: string) => void }) {
   const { session } = useAuth();
+  const patients = useConsentedPatients();
   const [items, setItems] = useState<{ description: string; amount: string }[]>([{ description: "", amount: "" }]);
   const [patientId, setPatientId] = useState("");
-  const [abha, setAbha] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
   const [bills, setBills] = useState<PatientRow[]>([]);
+
+  const selected = patients.find((p) => String(p.id) === patientId);
+  const patientNames = new Map(patients.map((p) => [p.id, p.name]));
 
   const load = useCallback(() => {
     apiFetch<{ bills: PatientRow[] }>("/api/nhcx/bills", { token: session?.access_token }).then((r) => setBills(r.bills)).catch(() => {});
@@ -373,7 +386,7 @@ function Billing({ onErr }: { onErr: (s: string) => void }) {
         token: session?.access_token,
         body: {
           patient_id: Number(patientId),
-          patient_abha_id: abha,
+          patient_abha_id: selected?.abha_id ?? "",
           line_items: items.filter((i) => i.description && Number(i.amount) > 0).map((i) => ({ description: i.description, amount: Number(i.amount) })),
         },
       });
@@ -385,7 +398,6 @@ function Billing({ onErr }: { onErr: (s: string) => void }) {
       setDone(`Bill #${bill.id} pushed to NHCX as claim #${claim.id} (${claim.status})`);
       setItems([{ description: "", amount: "" }]);
       setPatientId("");
-      setAbha("");
       load();
     } catch (e) {
       onErr((e as { detail: string }).detail);
@@ -399,12 +411,17 @@ function Billing({ onErr }: { onErr: (s: string) => void }) {
       <Panel title="Itemized bill — push to NHCX">
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="field-label">Patient user id</label>
-            <input className="input" value={patientId} onChange={(e) => setPatientId(e.target.value.replace(/\D/g, ""))} placeholder="e.g. 4" />
+            <label className="field-label">Patient</label>
+            <select className="input" value={patientId} onChange={(e) => setPatientId(e.target.value)}>
+              <option value="">Select patient</option>
+              {patients.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="field-label">Patient ABHA</label>
-            <input className="input mono" value={abha} onChange={(e) => setAbha(e.target.value.replace(/\D/g, "").slice(0, 14))} placeholder="14 digits" />
+            <input className="input mono" value={selected?.abha_id ?? ""} readOnly placeholder="filled from patient record" />
           </div>
         </div>
         <label className="field-label">Line items</label>
@@ -435,7 +452,7 @@ function Billing({ onErr }: { onErr: (s: string) => void }) {
           bills.slice(0, 10).map((b) => (
             <Row key={b.id}>
               <span className="mono text-xs">#{b.id}</span>
-              <span className="text-sm">{b.patient_name || `Patient ${b.patient_id}`}</span>
+              <span className="text-sm">{patientNames.get(b.patient_id) ?? `Patient ${b.patient_id}`}</span>
               <span className="ml-auto font-display">₹{(b.total ?? 0).toLocaleString("en-IN")}</span>
             </Row>
           ))

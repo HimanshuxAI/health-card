@@ -158,18 +158,55 @@ def list_consents(user: models.User = Depends(get_current_user), db: Session = D
         q = q.filter_by(patient_id=user.id)
     elif user.role == "hospital":
         q = q.filter_by(hospital_id=user.id)
-    rows = [
-        {
-            "id": c.id,
-            "patient_id": c.patient_id,
-            "hospital_id": c.hospital_id,
-            "scope": c.scope,
-            "status": c.status,
-            "granted_at": c.granted_at.isoformat(),
-        }
-        for c in q.all()
-    ]
+    rows = []
+    for c in q.all():
+        hospital = db.get(models.User, c.hospital_id)
+        rows.append(
+            {
+                "id": c.id,
+                "patient_id": c.patient_id,
+                "hospital_id": c.hospital_id,
+                "hospital_name": (hospital.hospital_name or hospital.name) if hospital else None,
+                "scope": c.scope,
+                "status": c.status,
+                "granted_at": c.granted_at.isoformat(),
+            }
+        )
     return {"consents": rows}
+
+
+@router.get("/patients")
+def list_patients(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Patients visible to the caller.
+
+    A hospital sees only patients that granted it an ACTIVE consent artifact.
+    Admins see every patient. Patients see only themselves.
+    """
+    q = db.query(models.User).filter_by(role="patient")
+    if user.role == "patient":
+        q = q.filter_by(id=user.id)
+    elif user.role == "hospital":
+        granted = [
+            c.patient_id
+            for c in db.query(models.ConsentArtifact)
+            .filter_by(hospital_id=user.id, status="ACTIVE")
+            .all()
+        ]
+        if not granted:
+            return {"patients": []}
+        q = q.filter(models.User.id.in_(granted))
+    rows = q.order_by(models.User.name).all()
+    return {
+        "patients": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "abha_id": p.abha_id,
+                "phone": p.phone,
+            }
+            for p in rows
+        ]
+    }
 
 
 @router.get("/consents/check")
