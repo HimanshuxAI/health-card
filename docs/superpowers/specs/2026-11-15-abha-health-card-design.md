@@ -125,7 +125,7 @@ Pages (Next.js App Router):
 
 ## 8. Seed Data
 
-`seed.py` in each service (or one orchestrating script) creates on first run:
+One orchestrating script (`scripts/seed.py`) that calls each service's seeding routine; run automatically on first `docker-compose up`:
 - Admin: admin@abha.dev; Hospital: city@abha.dev; Patients: aarav@abha.dev, diya@abha.dev (password: abha1234, shown on login page for demo convenience).
 - 2 hospitals, 6 patients with varied blood groups/conditions, ~20 health records, 8 bills, 5 claims in different statuses, 3 historical SOS alerts, populated ABDM trace log.
 
