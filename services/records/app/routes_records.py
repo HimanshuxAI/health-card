@@ -66,6 +66,19 @@ def create_record(
     }
 
 
+@router.get("/records/summary")
+def records_summary(user: UserClaim = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Counts for dashboards. Hospitals see everything; patients see their own."""
+    q = db.query(models.HealthRecord)
+    if user.role == "patient":
+        q = q.filter_by(patient_id=user.id)
+    rows = q.all()
+    by_type: dict[str, int] = {}
+    for r in rows:
+        by_type[r.type] = by_type.get(r.type, 0) + 1
+    return {"total": len(rows), "by_type": by_type, "patients": len({r.patient_id for r in rows})}
+
+
 @router.get("/records")
 def list_records(
     request: Request,

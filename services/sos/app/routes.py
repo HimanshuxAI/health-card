@@ -70,17 +70,12 @@ async def create_alert(body: dict, user: UserClaim = Depends(get_current_user), 
     db.commit()
     db.refresh(alert)
 
-    # Broadcast to every connected dashboard over WebSocket.
-    payload = _alert_out(alert)
-    payload["kind"] = "SOS_ALERT"
-    await manager.broadcast(payload)
-
     # Email emergency contacts (never blocks the alert).
     statuses = []
     loc = f"lat {lat}, lng {lng}" if lat is not None else "location unavailable"
     body_text = (
         f"EMERGENCY ALERT\n\nPatient: {patient_name}\nTrigger: {trigger}\n"
-        f"Location: {loc}\nTime: {payload['created_at']}\n\n"
+        f"Location: {loc}\nTime: {alert.created_at.isoformat()}\n\n"
         f"Open the ABHA Health Card app for the full emergency profile."
     )
     for c in contacts:
@@ -90,6 +85,12 @@ async def create_alert(body: dict, user: UserClaim = Depends(get_current_user), 
     alert.email_status = ",".join(statuses) if statuses else "SKIPPED"
     db.commit()
     db.refresh(alert)
+
+    # Broadcast to every connected dashboard over WebSocket (after final state).
+    payload = _alert_out(alert)
+    payload["kind"] = "SOS_ALERT"
+    await manager.broadcast(payload)
+
     return _alert_out(alert)
 
 

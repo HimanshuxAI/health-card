@@ -3,7 +3,7 @@ import secrets
 import time
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from app import models
@@ -117,7 +117,11 @@ def resolve_token(token: str, db: Session = Depends(get_db)):
 
 
 @router.get("/internal/profile/{patient_id}")
-def internal_profile(patient_id: int, x_internal_token: str = "", db: Session = Depends(get_db)):
+def internal_profile(
+    patient_id: int,
+    x_internal_token: str = Header(default=""),
+    db: Session = Depends(get_db),
+):
     """Internal endpoint for SOS service to fetch emergency contacts."""
     if x_internal_token != SHARED_TOKEN:
         raise HTTPException(status_code=403, detail="Internal only")
