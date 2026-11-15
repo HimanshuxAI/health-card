@@ -1,8 +1,12 @@
 .superpowers/
 __pycache__/
+*.pyc
 node_modules/
+.next/
+.turbo/
+out/
 *.sqlite
+*.db
 .env
 .DS_Store
-services/*.db
 .venv/
