@@ -5,14 +5,16 @@ cd "$(dirname "$0")"
 
 LOG_DIR=/tmp/abha-services
 mkdir -p "$LOG_DIR"
-export PYTHONPATH="$(pwd)/services"
+export PYTHONPATH="$(pwd)"
+PYTHON="$(pwd)/.venv/bin/python"
+UVICORN="$(pwd)/.venv/bin/uvicorn"
 
 PIDS=()
 
 start() {
   local name=$1 port=$2 dir=$3
   echo "Starting $name on :$port"
-  (cd "services/$dir" && PYTHONPATH="$PYTHONPATH" uvicorn app.main:app --host 127.0.0.1 --port "$port" >>"$LOG_DIR/$name.log" 2>&1) &
+  (cd "services/$dir" && PYTHONPATH="$PYTHONPATH" "$UVICORN" app.main:app --host 127.0.0.1 --port "$port" >>"$LOG_DIR/$name.log" 2>&1) &
   PIDS+=($!)
 }
 
