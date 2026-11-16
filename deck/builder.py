@@ -9,6 +9,12 @@ from deck.slides.narrative import (
     build_problem,
     build_solution,
 )
+from deck.slides.report import (
+    build_close,
+    build_evidence,
+    build_emergency,
+    build_interoperability,
+)
 from deck.slides.system import build_architecture, build_experience, build_security
 from deck.theme import new_presentation
 
@@ -35,7 +41,7 @@ def build_presentation(
     scan_token: str | None = None,
     assets_dir: Path | None = None,
 ) -> Path:
-    """Build and save the currently implemented presentation slides."""
+    """Build and save the complete ten-slide presentation."""
     output = Path(output)
     resolved_token = _validate_scan_token(scan_token)
     resolved_assets_dir = (
@@ -71,6 +77,13 @@ def build_presentation(
         build_experience(prs, assets_dir=resolved_assets_dir)
         build_architecture(prs)
         build_security(prs)
+        build_interoperability(prs)
+        build_emergency(
+            prs,
+            screenshot_path=resolved_assets_dir / "hospital_sos.png",
+        )
+        build_evidence(prs)
+        build_close(prs)
 
         output.parent.mkdir(parents=True, exist_ok=True)
         prs.save(output)

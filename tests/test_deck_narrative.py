@@ -139,7 +139,7 @@ def test_builds_three_native_narrative_slides_with_exact_copy(tmp_path: Path) ->
     assert output.stat().st_size > 0
 
     prs = Presentation(output)
-    assert len(prs.slides) == 6
+    assert len(prs.slides) == 10
 
     for slide, copy, title in zip(
         list(prs.slides)[:3], SLIDES[:3], APPROVED_TITLES, strict=True

@@ -116,8 +116,8 @@ def _assert_every_text_shape_fits(prs: Presentation) -> None:
 
 
 @pytest.fixture
-def six_slide_deck(tmp_path: Path) -> tuple[Path, Presentation]:
-    output = tmp_path / "six-slide-deck.pptx"
+def full_deck(tmp_path: Path) -> tuple[Path, Presentation]:
+    output = tmp_path / "ten-slide-deck.pptx"
 
     build_presentation(output)
 
@@ -126,18 +126,18 @@ def six_slide_deck(tmp_path: Path) -> tuple[Path, Presentation]:
     return output, Presentation(output)
 
 
-def test_system_builder_produces_six_slides(
-    six_slide_deck: tuple[Path, Presentation],
+def test_system_builder_builds_ten_slides_with_system_pages_four_to_six(
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
 
-    assert len(prs.slides) == 6
+    assert len(prs.slides) == 10
 
 
 def test_system_slides_have_exact_titles_messages_and_notes(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
 
     for slide, copy, title in zip(
         list(prs.slides)[3:6], SLIDES[3:6], EXPECTED_SYSTEM_TITLES, strict=True
@@ -150,9 +150,9 @@ def test_system_slides_have_exact_titles_messages_and_notes(
 
 
 def test_experience_slide_uses_exactly_three_real_project_screenshots(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     slide = prs.slides[3]
     texts = _texts(slide)
 
@@ -172,9 +172,9 @@ def test_experience_slide_uses_exactly_three_real_project_screenshots(
 
 
 def test_experience_lanes_are_unequal_and_joined_by_one_coral_route(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     slide = prs.slides[3]
     pictures = [
         shape
@@ -194,9 +194,9 @@ def test_experience_lanes_are_unequal_and_joined_by_one_coral_route(
 
 
 def test_experience_screenshots_are_tightly_cropped_to_product_content(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     pictures = [
         shape
         for shape in prs.slides[3].shapes
@@ -225,9 +225,9 @@ def test_all_required_screenshots_are_valid_nonempty_png_files() -> None:
 
 
 def test_architecture_slide_names_all_services_rails_and_patient_view(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     texts = set(_texts(prs.slides[4]))
 
     assert {
@@ -253,9 +253,9 @@ def test_architecture_slide_names_all_services_rails_and_patient_view(
 
 
 def test_architecture_slide_uses_varied_rows_and_coral_patient_view_block(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     slide = prs.slides[4]
     autoshapes = [
         shape
@@ -282,9 +282,9 @@ def test_architecture_slide_uses_varied_rows_and_coral_patient_view_block(
 
 
 def test_security_slide_keeps_emergency_resolver_technically_accurate(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     texts = _texts(prs.slides[5])
 
     assert {
@@ -301,9 +301,9 @@ def test_security_slide_keeps_emergency_resolver_technically_accurate(
 
 
 def test_security_slide_orders_resolver_steps_and_separates_consent_access(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
     texts = _texts(prs.slides[5])
     resolver_steps = (
         "OPAQUE RANDOM TOKEN",
@@ -330,14 +330,15 @@ def test_explicit_assets_directory_is_used_without_ambient_state(
     build_presentation(output, assets_dir=assets_dir)
 
     prs = Presentation(output)
-    assert len(prs.slides) == 6
+    assert len(prs.slides) == 10
     assert len(_picture_blobs(prs.slides[3])) == 3
+    assert len(_picture_blobs(prs.slides[7])) == 1
 
 
-def test_six_slide_deck_has_no_gradients_out_of_bounds_or_text_overflow(
-    six_slide_deck: tuple[Path, Presentation],
+def test_full_deck_has_no_gradients_out_of_bounds_or_text_overflow(
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
 
     for slide in prs.slides:
         assert not slide._element.xpath(".//a:gradFill")
@@ -346,9 +347,9 @@ def test_six_slide_deck_has_no_gradients_out_of_bounds_or_text_overflow(
 
 
 def test_total_rounded_rectangle_count_stays_at_or_below_four(
-    six_slide_deck: tuple[Path, Presentation],
+    full_deck: tuple[Path, Presentation],
 ) -> None:
-    _, prs = six_slide_deck
+    _, prs = full_deck
 
     rounded_rectangles = sum(
         len(slide._element.xpath('.//p:spPr/a:prstGeom[@prst="roundRect"]'))
