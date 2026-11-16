@@ -5,8 +5,10 @@ import Link from "next/link";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { TopNav } from "@/components/topnav";
 import { Badge, EmptyState, ErrorBanner, Panel, Row, Stat } from "@/components/ui";
+import { QrScanner } from "@/components/qr-scanner";
 import { apiFetch, wsUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { tokenFromPayload } from "@/lib/qr";
 
 const TABS = ["Dashboard", "Scan Patient", "New Record", "Billing", "Claims", "SOS Feed"] as const;
 type Tab = (typeof TABS)[number];
@@ -167,7 +169,7 @@ function ScanPatient({ onErr }: { onErr: (s: string) => void }) {
   const startedRef = useRef<string | null>(null);
 
   async function resolve(t?: string) {
-    const tok = (t ?? token).trim();
+    const tok = tokenFromPayload((t ?? token).trim());
     if (!tok) return;
     if (startedRef.current === tok) return; // guard against double-run
     startedRef.current = tok;
@@ -224,9 +226,18 @@ function ScanPatient({ onErr }: { onErr: (s: string) => void }) {
     }
   }
 
+  function handleDetected(payload: string) {
+    const tok = tokenFromPayload(payload);
+    setToken(tok);
+    resolve(tok);
+  }
+
   return (
     <div className="grid md:grid-cols-2 gap-6">
       <Panel title="Emergency scan — zero connectivity protocol">
+        <div className="mb-5">
+          <QrScanner onDetected={handleDetected} />
+        </div>
         <label className="field-label">Scan token (from QR payload)</label>
         <input className="input mono" value={token} onChange={(e) => setToken(e.target.value)} placeholder="e.g. 3f9c...  (paste or scan)" />
         <button className="btn mt-4" onClick={() => resolve()} disabled={phase === "resolving"}>
@@ -234,7 +245,8 @@ function ScanPatient({ onErr }: { onErr: (s: string) => void }) {
         </button>
         <p className="text-xs text-stone mt-4">
           The token is HMAC-verified server-side, then the AES-128-GCM trauma profile is decrypted
-          and returned. Target: under 800 milliseconds.
+          and returned. Target: under 800 milliseconds. A pasted address such as{" "}
+          <span className="mono">https://host/scan?t=token</span> is accepted as well.
         </p>
       </Panel>
 

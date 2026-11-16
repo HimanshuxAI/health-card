@@ -6,8 +6,10 @@ import { useSearchParams } from "next/navigation";
 import { AlertTriangle, PhoneCall } from "lucide-react";
 import { TopNav } from "@/components/topnav";
 import { Badge, EmptyState, ErrorBanner, Panel, Row } from "@/components/ui";
+import { QrScanner } from "@/components/qr-scanner";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { tokenFromPayload } from "@/lib/qr";
 
 type Profile = {
   full_name: string;
@@ -44,15 +46,16 @@ function Scanner() {
   }, [params]);
 
   const resolve = useCallback(async (tok: string) => {
-    if (!tok.trim()) return;
-    if (startedRef.current === tok.trim()) return; // guard against double-run
-    startedRef.current = tok.trim();
+    const token = tokenFromPayload(tok);
+    if (!token) return;
+    if (startedRef.current === token) return; // guard against double-run
+    startedRef.current = token;
     setErr("");
     setPhase("resolving");
     setLines([]);
     setResolved(null);
     try {
-      const r = await apiFetch<{ profile: Profile; retrieved_in_ms: number }>(`/api/records/emergency/resolve/${tok.trim()}`);
+      const r = await apiFetch<{ profile: Profile; retrieved_in_ms: number }>(`/api/records/emergency/resolve/${token}`);
       const p = r.profile;
       const reveal = [
         `name:        ${p.full_name || "—"}`,
@@ -80,6 +83,15 @@ function Scanner() {
     if (t && phase === "idle") resolve(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
+
+  const handleDetected = useCallback(
+    (payload: string) => {
+      const tok = tokenFromPayload(payload);
+      setToken(tok);
+      resolve(tok);
+    },
+    [resolve]
+  );
 
   async function dispatchSos() {
     setErr("");
@@ -117,6 +129,16 @@ function Scanner() {
 
         <ErrorBanner detail={err} />
 
+        <div className="panel p-5 mt-6">
+          <div className="label-caps">Scan the card with this device</div>
+          <p className="text-xs text-stone mt-2 mb-4 leading-relaxed">
+            Point the camera at the QR code on the patient's card. The code opens this scanner
+            with the token filled in. A camera needs a secure address, so this works over HTTPS
+            and on localhost.
+          </p>
+          <QrScanner onDetected={handleDetected} />
+        </div>
+
         <div className="mt-6 flex gap-2">
           <input
             className="input mono"
@@ -129,6 +151,10 @@ function Scanner() {
             {phase === "resolving" ? "Decrypting" : "Resolve"}
           </button>
         </div>
+        <p className="text-xs text-stone mt-2">
+          A pasted address such as <span className="mono">https://host/scan?t=token</span> works
+          as well — the token is taken from it.
+        </p>
 
         <div className="mt-6 grid md:grid-cols-2 gap-6">
           <Panel title="Trauma profile" right={resolved ? <Badge tone="green">{resolved.retrieved_in_ms < 1 ? "<1" : resolved.retrieved_in_ms}ms</Badge> : undefined}>

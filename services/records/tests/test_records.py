@@ -80,6 +80,44 @@ def test_emergency_profile_qr_resolve():
     assert r8.status_code == 404
 
 
+def test_qr_card_stays_valid_until_it_is_regenerated():
+    """Reading the card must not invalidate a copy that is already printed."""
+    headers, _ = _register("stable@example.com")
+    client.put(
+        "/emergency/profile",
+        json={
+            "blood_group": "A+",
+            "allergies": ["Dust"],
+            "chronic_conditions": [],
+            "medications": [],
+            "emergency_contacts": [{"name": "Sister", "phone": "+91-88888", "relation": "Sister"}],
+        },
+        headers=headers,
+    )
+
+    first = client.post("/emergency/qr", headers=headers).json()["token"]
+
+    # reading the card returns the same token instead of rotating it
+    read = client.get("/emergency/qr", headers=headers)
+    assert read.status_code == 200
+    assert read.json()["token"] == first
+
+    # the printed card still resolves
+    assert client.get(f"/emergency/resolve/{first}").status_code == 200
+
+    # an explicit regenerate invalidates the old copy
+    rotated = client.post("/emergency/qr", headers=headers).json()["token"]
+    assert rotated != first
+    assert client.get(f"/emergency/resolve/{first}").status_code == 410
+    assert client.get(f"/emergency/resolve/{rotated}").status_code == 200
+
+
+def test_qr_card_requires_a_patient_account():
+    headers, _ = _register("nurse@example.com")
+    headers["Authorization"] = _claim(1, "hospital")["Authorization"]
+    assert client.get("/emergency/qr", headers=headers).status_code == 403
+
+
 def token_stub(email):
     return None
 

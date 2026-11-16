@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { QRCodeSVG } from "qrcode.react";
 import { AlertTriangle, PhoneCall, Plus, X } from "lucide-react";
 import { TopNav } from "@/components/topnav";
 import { Badge, EmptyState, ErrorBanner, Panel, Row } from "@/components/ui";
+import { EmergencyQr } from "@/components/emergency-qr";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { readQrToken, regenerateQrToken } from "@/lib/qr-card";
 
 type Profile = {
   full_name: string;
@@ -108,16 +109,33 @@ function MyCard({ onErr }: { onErr: (s: string) => void }) {
   const { session } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [qr, setQr] = useState<{ token: string } | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
   const [sosState, setSosState] = useState<"idle" | "sending" | "sent">("idle");
 
   useEffect(() => {
-    apiFetch<Profile>("/api/records/emergency/profile", { token: session?.access_token })
+    if (!session) return;
+    apiFetch<Profile>("/api/records/emergency/profile", { token: session.access_token })
       .then(setProfile)
       .catch(() => {});
-    apiFetch<{ token: string }>("/api/records/emergency/qr", { method: "POST", token: session?.access_token })
-      .then(setQr)
+    // Reading the card does not rotate it, so a printed copy keeps working.
+    readQrToken(session.access_token)
+      .then((token) => setQr({ token }))
       .catch(() => {});
   }, [session]);
+
+  async function regenerate() {
+    if (!session || regenerating) return;
+    setRegenerating(true);
+    onErr("");
+    try {
+      const token = await regenerateQrToken(session.access_token);
+      setQr({ token });
+    } catch (e) {
+      onErr((e as { detail: string }).detail);
+    } finally {
+      setRegenerating(false);
+    }
+  }
 
   async function panic() {
     if (!session || sosState !== "idle") return;
@@ -145,7 +163,8 @@ function MyCard({ onErr }: { onErr: (s: string) => void }) {
     }
   }
 
-  const scanUrl = qr ? `${typeof window !== "undefined" ? window.location.origin : ""}/scan?t=${qr.token}` : "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const localOnly = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(origin);
 
   return (
     <div className="grid md:grid-cols-[1fr_320px] gap-8">
@@ -211,13 +230,30 @@ function MyCard({ onErr }: { onErr: (s: string) => void }) {
       <div className="panel p-5 text-center">
         <div className="label-caps">Scan for emergency profile</div>
         <div className="mt-4 flex justify-center">
-          {qr ? <QRCodeSVG value={scanUrl} size={190} bgColor="#ffffff" fgColor="#1c1917" /> : <div className="h-[190px] flex items-center text-xs text-stone">Generating token...</div>}
+          {qr ? (
+            <EmergencyQr origin={origin} token={qr.token} />
+          ) : (
+            <div className="h-[220px] flex items-center text-xs text-stone">Generating token...</div>
+          )}
         </div>
         <p className="text-xs text-stone mt-4 leading-relaxed">
           Anyone with this QR — a paramedic, a stranger, a doctor — can open your trauma profile
-          without an account. Regenerate any time to invalidate old prints.
+          without an account. The code stays the same until you regenerate it, so a printed copy
+          keeps working.
         </p>
+        {localOnly && (
+          <p className="text-xs mt-3 leading-relaxed" style={{ color: "var(--stone)" }}>
+            This code points at <span className="mono">localhost</span>, so it opens the scanner on
+            this machine only. Open the app at its public address and the code will point there.
+          </p>
+        )}
         {qr && <div className="mono text-[10px] text-stone mt-3 break-all">{qr.token}</div>}
+        <button className="btn btn-outline mt-4" onClick={regenerate} disabled={regenerating}>
+          {regenerating ? "Regenerating..." : "Regenerate card"}
+        </button>
+        <p className="text-[10px] text-stone mt-2">
+          Regenerating issues a new code and stops the old one from working.
+        </p>
       </div>
     </div>
   );

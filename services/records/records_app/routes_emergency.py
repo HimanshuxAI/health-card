@@ -81,8 +81,30 @@ def get_emergency_profile(user: UserClaim = Depends(get_current_user), db: Sessi
     return _profile_dict(p, user.name, user.abha_id)
 
 
+@router.get("/emergency/qr")
+def read_qr_token(user: UserClaim = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Return the patient's current emergency card token.
+
+    Reading the card never rotates it. A copy that is already printed keeps
+    working for as long as the patient does not regenerate it on purpose.
+    """
+    if user.role != "patient":
+        raise HTTPException(status_code=403, detail="Only patients own an emergency card")
+    qt = db.query(models.QrToken).filter_by(patient_id=user.id, active=True).first()
+    if qt:
+        return {"token": qt.token, "scan_path": f"/scan?t={qt.token}"}
+    token = secrets.token_hex(16)
+    db.add(models.QrToken(patient_id=user.id, token=token))
+    db.commit()
+    return {"token": token, "scan_path": f"/scan?t={token}"}
+
+
 @router.post("/emergency/qr")
 def create_qr_token(user: UserClaim = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Issue a fresh emergency card token and invalidate the previous one.
+
+    This is the deliberate rotation the patient triggers from the card screen.
+    """
     if user.role != "patient":
         raise HTTPException(status_code=403, detail="Only patients generate emergency QR tokens")
     # deactivate old tokens

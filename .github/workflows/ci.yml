@@ -90,6 +90,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Unit tests
+        working-directory: frontend
+        run: npm test
+
       - name: Generate route types
         working-directory: frontend
         run: npx next typegen

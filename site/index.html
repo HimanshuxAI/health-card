@@ -59,7 +59,7 @@
           <span class="fact-label">Roles: patient, hospital, administrator</span>
         </div>
         <div class="fact">
-          <span class="fact-value">20</span>
+          <span class="fact-value">38</span>
           <span class="fact-label">Automated tests, plus a 16-step live smoke test</span>
         </div>
       </section>
@@ -219,7 +219,7 @@ docker pull ghcr.io/himanshuxai/health-card-services:latest</code></pre>
       <section id="limits">
         <h2 class="section-title">What this build does not do</h2>
         <ul class="plain-list">
-          <li>The scanner reads a pasted token. There is no camera decode in the web build.</li>
+          <li>Camera scanning runs in the browser. Browsers only hand over a camera on a secure origin, so it works over HTTPS and on <code>localhost</code> and not over plain HTTP on a LAN address. The token can always be pasted instead.</li>
           <li>Emergency contacts are notified by email. There is no SMS gateway. Without SMTP credentials the alert still fires and the status reads <code>SKIPPED</code>.</li>
           <li>ABDM and NHCX are simulated inside our own services. The endpoints follow the real shapes, but no government sandbox is called.</li>
           <li>Each service owns one SQLite file. There are no cross-service transactions and no shared event bus beyond the WebSocket broadcast.</li>

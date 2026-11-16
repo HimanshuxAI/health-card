@@ -129,8 +129,9 @@ Password for every account: `abha1234`
    badges, emergency contacts and a QR code.
 2. Edit the emergency profile. It is re-sealed with AES-128-GCM and the change is visible on the
    next scan.
-3. In the hospital workspace, open **Scan Patient** and paste the token from the QR payload. The
-   profile decrypts line by line, usually in under five milliseconds.
+3. In the hospital workspace, open **Scan Patient** and scan the card with the camera, or paste
+   the token from the QR payload. The profile decrypts line by line, usually in under five
+   milliseconds.
 4. In **New Record**, write a prescription. It is stored as a FHIR `MedicationRequest` and linked
    as an ABDM care context. The bundle renders on the page.
 5. In **Billing**, create an itemised bill and push it to NHCX. The claim moves from `SUBMITTED` to
@@ -152,7 +153,7 @@ Every push to `main` runs four jobs on GitHub Actions:
 |---|---|
 | Backend tests | `pytest` against an isolated database per service |
 | End-to-end smoke test | Starts the five services, seeds them, runs `scripts/e2e.py` |
-| Frontend build | Route type generation, `tsc --noEmit`, production build |
+| Frontend build | Unit tests, route type generation, `tsc --noEmit`, production build |
 | Build images | Builds both container images without pushing |
 
 ### Published images
@@ -186,6 +187,68 @@ docker compose -f docker-compose.ghcr.yml run --rm --no-deps seed python scripts
 docker compose -f docker-compose.ghcr.yml up -d
 ```
 
+### Deploying to a server, automatically
+
+`.github/workflows/deploy.yml` deploys to any Docker host over SSH after the images for a commit
+have been published. Every push to `main` is then deployed on its own, pinned to that commit.
+
+One-time setup on the host, which needs Docker and Docker Compose:
+
+```bash
+sudo useradd -m -s /bin/bash deploy
+echo "deploy ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/deploy
+mkdir -p /srv/health-card/gateway
+```
+
+Then add the repository secrets: `DEPLOY_HOST`, `DEPLOY_SSH_KEY`, and the optional variables
+`DEPLOY_USER`, `DEPLOY_PORT` and `DEPLOY_PATH`. The workflow copies the compose file and the
+gateway configuration to the host, pulls the images for that commit and starts the stack.
+
+If the secrets are not set the workflow reports that it has nothing to do and exits, so the
+repository stays usable without a host.
+
+### Permanent public address
+
+The stack listens on port 80. To give it a fixed name on the internet, put a named Cloudflare
+tunnel in front of it, or publish the port directly.
+
+A named tunnel keeps the same address across restarts:
+
+```bash
+cloudflared tunnel login
+cloudflared tunnel create abha
+cloudflared tunnel route dns abha health.example.com
+cat > ~/.cloudflared/config.yml <<'YAML'
+tunnel: <TUNNEL-ID>
+credentials-file: /Users/<YOU>/.cloudflared/<TUNNEL-ID>.json
+ingress:
+  - hostname: health.example.com
+    service: http://localhost:80
+  - service: http_status:404
+YAML
+```
+
+`scripts/tunnel.sh` starts that tunnel when `~/.cloudflared/config.yml` exists, and a quick
+tunnel otherwise. A quick tunnel needs no account, but Cloudflare hands out a random address that
+changes on every restart.
+
+### Keeping a deployment up on a Mac
+
+`scripts/install-mac-service.sh` installs two launchd agents:
+
+| Agent | What it does |
+|---|---|
+| `com.abha.healthcard.keepalive` | Restarts the Docker stack and the tunnel when either one stops, and writes the current public address to `~/.local/state/health-card/public-url.txt` |
+| `com.abha.healthcard.caffeinate` | Stops the Mac from sleeping while it serves the app |
+
+```bash
+bash scripts/install-mac-service.sh
+launchctl list | grep com.abha.healthcard
+```
+
+The agents start at login. macOS does not let a launchd job read anything inside `~/Documents`,
+so the installer copies the files the watchdog needs into `~/.local/share/health-card`.
+
 ### Project site
 
 A short description of the system, with the architecture diagram and the run instructions, is
@@ -198,14 +261,19 @@ The workflow is `.github/workflows/pages.yml` and it publishes the `site/` direc
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest                        # 20 unit and integration tests
+.venv/bin/python -m pytest                        # 22 unit and integration tests
 .venv/bin/python scripts/e2e.py                   # 16-step live smoke test, services must be running
+cd frontend && npm test                           # 16 frontend tests (vitest)
 cd frontend && npx next typegen && npx tsc --noEmit
 ```
 
 The smoke test covers the whole path: login for all three roles, a consent-gated record read,
 emergency token issue and resolve, record creation, FHIR conversion, bill creation, claim
 submission, adjudication, an SOS alert and the ABDM trace.
+
+The frontend tests cover the QR path: the token helpers, the camera component, and a check that
+the code printed on the card keeps its four-module quiet zone and decodes back to the scan
+address with a standard decoder.
 
 ---
 
@@ -254,12 +322,19 @@ Without SMTP settings the alert still fires over the WebSocket and the email sta
 
 ## What this build does not do
 
-- The scanner reads a pasted token. There is no camera decode in the web build.
+- Camera scanning runs in the browser with `getUserMedia` and `jsQR`. Browsers only hand over a
+  camera on a secure origin, so it works over HTTPS and on `localhost` and not over plain HTTP
+  on a LAN address. The token can always be pasted instead.
+- The QR code on the card points at the address the card is shown on. A card printed from a
+  `localhost` session opens the scanner on that machine only.
 - Emergency contacts are notified by email. There is no SMS gateway.
 - ABDM and NHCX are simulated in-process. No government sandbox is called.
 - Each service owns one SQLite file. There are no cross-service transactions and no shared event
   bus beyond the WebSocket broadcast.
 - The frontend is a single Next.js application, not a mobile build.
+- A hosted deployment needs a machine that stays on. The repository ships the images, the compose
+  file and a GitHub Actions workflow that deploys over SSH, but it cannot host the stack itself:
+  GitHub Pages serves static files only, and an Actions runner is temporary.
 
 ---
 

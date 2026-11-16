@@ -19,10 +19,26 @@ service that owns them.
 ```bash
 npm install
 npm run dev        # development server on http://localhost:3000
+npm test           # vitest, single run
 npx next typegen   # generate route types (needed before a standalone type check)
 npx tsc --noEmit   # type check
 npm run build      # production build
 ```
+
+## The emergency QR
+
+The code on the patient's card is printed by `components/emergency-qr.tsx`. Three settings decide
+whether a phone can read it, and they are covered by `components/emergency-qr.test.tsx`:
+
+- `marginSize={4}` adds the four-module quiet zone. Without it the code sits flush against the
+  panel edge and most camera decoders refuse it.
+- `level="H"` keeps 30 percent of the code recoverable, which covers a creased or badly lit card.
+- `shapeRendering="crispEdges"` stops the browser smoothing module edges into grey gradients.
+
+`components/qr-scanner.tsx` reads a code with the camera through `getUserMedia` and decodes it
+with `jsQR`. It is used on the public scanner page and on the hospital scan desk. A camera needs
+a secure origin, so it works over HTTPS and on `localhost` and not over plain HTTP on a LAN
+address; the token can always be pasted instead.
 
 ## Notes
 
