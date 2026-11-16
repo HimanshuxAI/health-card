@@ -508,7 +508,7 @@ function SosFeed() {
 
   useEffect(() => {
     if (!session) return;
-    const ws = new WebSocket(`${wsUrl}?token=${session.access_token}`);
+    const ws = new WebSocket(`${wsUrl()}?token=${session.access_token}`);
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
     ws.onmessage = (ev) => {

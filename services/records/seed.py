@@ -1,6 +1,7 @@
 """Seed the records service: emergency profiles, trauma profiles, health records, QR token."""
 
 import json
+import os
 import secrets
 import sqlite3
 import sys
@@ -16,7 +17,12 @@ from records_app.main import engine, SessionLocal
 from records_app.crypto import seal
 from services.shared.db import Base
 
-IDENTITY_DB = Path(__file__).parent.parent / "identity" / "identity.db"
+# Where the identity service keeps its database. The environment variable wins
+# so the same seed works when the service runs from a container image with the
+# database on a mounted volume.
+IDENTITY_DB = Path(
+    os.getenv("IDENTITY_DB", str(Path(__file__).parent.parent / "identity" / "identity.db"))
+)
 
 PROFILES = {
     "aarav@abha.dev": {

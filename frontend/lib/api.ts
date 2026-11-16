@@ -31,5 +31,16 @@ export async function apiFetch<T>(
   return data as T;
 }
 
-export const wsUrl =
-  process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8005/ws";
+/**
+ * WebSocket endpoint for the live SOS feed.
+ *
+ * Derived from the current origin at runtime so the browser reaches the
+ * gateway on whichever host and scheme the app is served from. Set
+ * NEXT_PUBLIC_WS_URL to override it.
+ */
+export function wsUrl(): string {
+  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+  if (typeof window === "undefined") return "ws://localhost/api/sos/ws";
+  const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${scheme}//${window.location.host}/api/sos/ws`;
+}

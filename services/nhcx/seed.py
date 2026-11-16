@@ -1,6 +1,7 @@
 """Seed the NHCX service: bills and claims in varied states."""
 
 import json
+import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -15,7 +16,12 @@ from nhcx_app.main import engine, SessionLocal
 from nhcx_app.state_machine import build_fhir_claim
 from services.shared.db import Base
 
-IDENTITY_DB = Path(__file__).parent.parent / "identity" / "identity.db"
+# Where the identity service keeps its database. The environment variable wins
+# so the same seed works when the service runs from a container image with the
+# database on a mounted volume.
+IDENTITY_DB = Path(
+    os.getenv("IDENTITY_DB", str(Path(__file__).parent.parent / "identity" / "identity.db"))
+)
 
 BILLS = [
     # patient_email, hospital_email, items, claim_status (None = no claim)

@@ -2,5 +2,9 @@ FROM python:3.13-slim
 WORKDIR /srv
 COPY requirements.txt /srv/requirements.txt
 RUN pip install --no-cache-dir -r /srv/requirements.txt
+# The application source lives in the image so the service can run without a
+# host bind mount. Databases are excluded by the repository .dockerignore.
+COPY services/ /srv/services
+COPY scripts/ /srv/scripts
 ENV PYTHONPATH=/srv/services:/srv
 ENV PYTHONUNBUFFERED=1

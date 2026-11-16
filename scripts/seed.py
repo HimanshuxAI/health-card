@@ -16,13 +16,24 @@ PYTHON = str(VENV_PY) if VENV_PY.exists() else sys.executable
 
 ORDER = ["identity", "records", "abdm", "nhcx", "sos"]
 
+# Service -> (environment variable that points at its database, default file
+# next to the service package). The environment wins so a container deployment
+# with the database on a mounted volume resets the same file the service uses.
 DB_FILES = {
-    "identity": "identity.db",
-    "records": "records.db",
-    "abdm": "abdm.db",
-    "nhcx": "nhcx.db",
-    "sos": "sos.db",
+    "identity": ("IDENTITY_DB", "identity.db"),
+    "records": ("RECORDS_DB", "records.db"),
+    "abdm": ("ABDM_DB", "abdm.db"),
+    "nhcx": ("NHCX_DB", "nhcx.db"),
+    "sos": ("SOS_DB", "sos.db"),
 }
+
+
+def db_path(service: str) -> Path:
+    env_var, default_name = DB_FILES[service]
+    configured = os.getenv(env_var)
+    if configured:
+        return Path(configured)
+    return ROOT / "services" / service / default_name
 
 
 def reset_databases():
@@ -34,12 +45,12 @@ def reset_databases():
     host and recreating them in a container straight afterwards can fail with
     "unable to open database file" while Docker Desktop catches up.
     """
-    for svc, filename in DB_FILES.items():
-        db = ROOT / "services" / svc / filename
+    for service in DB_FILES:
+        db = db_path(service)
         for path in (db, Path(f"{db}-journal"), Path(f"{db}-wal"), Path(f"{db}-shm")):
             if path.exists():
                 path.unlink()
-                print(f"[{svc}] removed {path.name}")
+                print(f"[{service}] removed {path.name}")
 
 
 def main():
