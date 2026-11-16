@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ABHA Health Card</title>
+    <meta
+      name="description"
+      content="Digital health card and emergency trauma profile built on ABDM and NHCX protocols, with five independent services behind one gateway."
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="masthead-inner">
+        <a class="wordmark" href="https://github.com/HimanshuxAI/health-card">
+          ABHA<span class="wordmark-dot">.</span>Card
+        </a>
+        <p class="masthead-kicker">Group SY1512 &middot; School of Computing, MIT-ADT University</p>
+        <nav class="masthead-nav">
+          <a href="#architecture">Architecture</a>
+          <a href="#modules">Modules</a>
+          <a href="#run">Run it</a>
+          <a href="#deploy">Deploy</a>
+          <a href="https://github.com/HimanshuxAI/health-card">Repository</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="standfirst">
+        <h1>A digital health card that a responder can read before the ambulance arrives.</h1>
+        <p>
+          The patient carries an emergency trauma profile on a signed QR code. A hospital scans it and
+          gets blood group, allergies, conditions, medications and emergency contacts in about one
+          millisecond, without an account and without the patient's data leaving the record store.
+          Visits become HL7 FHIR v4 records, bills become NHCX claims, and the panic button reaches
+          every emergency contact by email and every hospital dashboard over a live WebSocket.
+        </p>
+        <p class="standfirst-meta">
+          Five FastAPI services, one NGINX gateway, one Next.js frontend. Each service owns its own
+          SQLite database. ABDM and NHCX gateways are simulated in-process, so the system runs with
+          no external dependency.
+        </p>
+      </section>
+
+      <section class="facts">
+        <div class="fact">
+          <span class="fact-value">1 ms</span>
+          <span class="fact-label">Emergency profile decryption</span>
+        </div>
+        <div class="fact">
+          <span class="fact-value">5</span>
+          <span class="fact-label">Independent services, each with its own database</span>
+        </div>
+        <div class="fact">
+          <span class="fact-value">3</span>
+          <span class="fact-label">Roles: patient, hospital, administrator</span>
+        </div>
+        <div class="fact">
+          <span class="fact-value">20</span>
+          <span class="fact-label">Automated tests, plus a 16-step live smoke test</span>
+        </div>
+      </section>
+
+      <section id="architecture">
+        <h2 class="section-title">Architecture</h2>
+        <div class="diagram-wrap">
+          <svg
+            class="diagram"
+            viewBox="0 0 920 430"
+            role="img"
+            aria-label="Browser and public scanner reach the NGINX gateway, which routes to five services, each backed by its own SQLite database."
+          >
+            <defs>
+              <style>
+                .box { fill: #ffffff; stroke: #1c1917; stroke-width: 1; }
+                .box-soft { fill: #ede8db; stroke: #1c1917; stroke-width: 1; }
+                .accent { fill: #dcf5e7; stroke: #166534; stroke-width: 1; }
+                .label { font: 600 13px Georgia, serif; fill: #1c1917; }
+                .sub { font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; fill: #78716c; }
+                .link { stroke: #1c1917; stroke-width: 1; fill: none; }
+              </style>
+            </defs>
+
+            <rect class="box" x="20" y="40" width="200" height="70" />
+            <text class="label" x="36" y="70">Browser</text>
+            <text class="sub" x="36" y="90">patient / hospital / admin</text>
+
+            <rect class="box" x="20" y="140" width="200" height="70" />
+            <text class="label" x="36" y="170">Public scanner</text>
+            <text class="sub" x="36" y="190">signed QR token, no login</text>
+
+            <rect class="box-soft" x="300" y="90" width="200" height="80" />
+            <text class="label" x="316" y="122">NGINX gateway</text>
+            <text class="sub" x="316" y="142">routing, rate limit, ws upgrade</text>
+
+            <path class="link" d="M220 75 H300" marker-end="url(#arrow)" />
+            <path class="link" d="M220 175 H270 V130 H300" marker-end="url(#arrow)" />
+
+            <g>
+              <rect class="box" x="570" y="20" width="150" height="60" />
+              <text class="label" x="584" y="44">Identity</text>
+              <text class="sub" x="584" y="62">identity.db</text>
+
+              <rect class="box" x="750" y="20" width="150" height="60" />
+              <text class="label" x="764" y="44">Records</text>
+              <text class="sub" x="764" y="62">records.db</text>
+
+              <rect class="box" x="570" y="110" width="150" height="60" />
+              <text class="label" x="584" y="134">ABDM</text>
+              <text class="sub" x="584" y="152">abdm.db</text>
+
+              <rect class="box" x="750" y="110" width="150" height="60" />
+              <text class="label" x="764" y="134">NHCX</text>
+              <text class="sub" x="764" y="152">nhcx.db</text>
+
+              <rect class="accent" x="570" y="200" width="150" height="60" />
+              <text class="label" x="584" y="224">SOS</text>
+              <text class="sub" x="584" y="242">sos.db</text>
+            </g>
+
+            <path class="link" d="M500 130 H540 V50 H570" marker-end="url(#arrow)" />
+            <path class="link" d="M500 130 H540 V50 H750" marker-end="url(#arrow)" />
+            <path class="link" d="M500 130 H540 V140 H570" marker-end="url(#arrow)" />
+            <path class="link" d="M500 130 H540 V140 H750" marker-end="url(#arrow)" />
+            <path class="link" d="M500 130 H540 V230 H570" marker-end="url(#arrow)" />
+
+            <text class="sub" x="30" y="310">Every request carries a JWT with role claims. Every service checks the role itself.</text>
+            <text class="sub" x="30" y="332">Trauma profiles are sealed with AES-128-GCM and signed with HMAC-SHA256 before they are written.</text>
+            <text class="sub" x="30" y="354">Consent artifacts gate hospital reads. Revoking one takes effect on the next request.</text>
+            <text class="sub" x="30" y="376">The public scanner resolves a signed token only, and never returns patient identity without it.</text>
+
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#1c1917" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </section>
+
+      <section id="modules">
+        <h2 class="section-title">Modules</h2>
+        <table class="modules">
+          <thead>
+            <tr>
+              <th>Synopsis module</th>
+              <th>Implementation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Hardware and encryption</td>
+              <td><code>services/records/records_app/crypto.py</code>, sealed QR tokens in <code>routes_emergency.py</code></td>
+            </tr>
+            <tr>
+              <td>Mobile client and emergency SOS</td>
+              <td><code>frontend/app/patient</code>, <code>frontend/app/hospital</code>, <code>frontend/app/scan</code>, <code>services/sos/sos_app</code></td>
+            </tr>
+            <tr>
+              <td>ABDM and FHIR interoperability</td>
+              <td><code>services/abdm/abdm_app/fhir_builder.py</code>, sandbox simulator, integration trace log</td>
+            </tr>
+            <tr>
+              <td>NHCX claims synchronisation</td>
+              <td><code>services/nhcx/nhcx_app/state_machine.py</code>, bill to FHIR claim, adjudication</td>
+            </tr>
+            <tr>
+              <td>Authentication</td>
+              <td><code>services/identity/identity_app</code>, bcrypt hashing, JWT role claims, consent artifacts</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="run">
+        <h2 class="section-title">Run it</h2>
+        <p class="section-lead">Build from source and start the whole stack on one command.</p>
+        <pre class="code"><code>git clone https://github.com/HimanshuxAI/health-card.git
+cd health-card
+docker compose up --build</code></pre>
+        <p class="section-lead">The gateway and the frontend are on <code>http://localhost</code>, the frontend is also on <code>http://localhost:3000</code>, and the five services are on ports 8001 to 8005. Seed data is created on first boot.</p>
+
+        <p class="section-lead">To run without the source tree, pull the published images instead.</p>
+        <pre class="code"><code>docker compose -f docker-compose.ghcr.yml up -d</code></pre>
+
+        <h3 class="subsection-title">Demo accounts</h3>
+        <table class="modules">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Email</th>
+              <th>Password</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Patient</td><td><code>aarav@abha.dev</code></td><td><code>abha1234</code></td></tr>
+            <tr><td>Hospital</td><td><code>city@abha.dev</code></td><td><code>abha1234</code></td></tr>
+            <tr><td>Administrator</td><td><code>admin@abha.dev</code></td><td><code>abha1234</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="deploy">
+        <h2 class="section-title">Deployment</h2>
+        <p class="section-lead">GitHub Actions builds and tests every push, then publishes the images to GitHub Container Registry.</p>
+        <pre class="code"><code>docker pull ghcr.io/himanshuxai/health-card-frontend:latest
+docker pull ghcr.io/himanshuxai/health-card-services:latest</code></pre>
+        <ul class="plain-list">
+          <li><a href="https://github.com/HimanshuxAI/health-card/actions">Workflow runs</a> cover the backend tests, the live smoke test, the frontend type check and build, and the image builds.</li>
+          <li><a href="https://github.com/HimanshuxAI/health-card/pkgs/container/health-card-frontend">Container packages</a> are published on every push to <code>main</code> and on <code>v*</code> tags.</li>
+          <li><a href="https://github.com/HimanshuxAI/health-card/blob/main/docker-compose.ghcr.yml"><code>docker-compose.ghcr.yml</code></a> runs the published images with the databases on a named volume, so a deployment needs no source tree and keeps its data across restarts.</li>
+          <li>This page is served by GitHub Pages from the same repository.</li>
+        </ul>
+      </section>
+
+      <section id="limits">
+        <h2 class="section-title">What this build does not do</h2>
+        <ul class="plain-list">
+          <li>The scanner reads a pasted token. There is no camera decode in the web build.</li>
+          <li>Emergency contacts are notified by email. There is no SMS gateway. Without SMTP credentials the alert still fires and the status reads <code>SKIPPED</code>.</li>
+          <li>ABDM and NHCX are simulated inside our own services. The endpoints follow the real shapes, but no government sandbox is called.</li>
+          <li>Each service owns one SQLite file. There are no cross-service transactions and no shared event bus beyond the WebSocket broadcast.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <p>MIT licensed. Built for Group SY1512, School of Computing, MIT-ADT University.</p>
+        <p>
+          <a href="https://github.com/HimanshuxAI/health-card">Source</a> &middot;
+          <a href="https://github.com/HimanshuxAI/health-card/actions">Builds</a> &middot;
+          <a href="https://github.com/HimanshuxAI/health-card/blob/main/README.md">Readme</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

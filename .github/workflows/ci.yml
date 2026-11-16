@@ -41,10 +41,23 @@ jobs:
 
       - name: Start the five services
         run: |
-          for service in identity records abdm nhcx sos; do
-            (cd services/$service && python -m uvicorn ${service}_app.main:app --host 127.0.0.1 --port 8000 &) ;
+          while read -r name port module; do
+            (
+              cd services/$name
+              PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/services" \
+                nohup python -m uvicorn "$module:app" --host 127.0.0.1 --port "$port" >"$RUNNER_TEMP/$name.log" 2>&1 &
+            )
+          done <<'EOF'
+          identity 8001 identity_app.main
+          records 8002 records_app.main
+          abdm 8003 abdm_app.main
+          nhcx 8004 nhcx_app.main
+          sos 8005 sos_app.main
+          EOF
+          sleep 12
+          for port in 8001 8002 8003 8004 8005; do
+            curl -fsS "http://127.0.0.1:$port/health" || { cat "$RUNNER_TEMP"/*.log; exit 1; }
           done
-          sleep 8
 
       - uses: actions/setup-python@v5
         with:
@@ -76,6 +89,10 @@ jobs:
       - name: Install dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Generate route types
+        working-directory: frontend
+        run: npx next typegen
 
       - name: Type check
         working-directory: frontend
