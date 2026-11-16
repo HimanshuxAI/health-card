@@ -86,6 +86,7 @@ Fig. 3 shows the claim workflow. Hospital staff create an itemized bill, consist
 
 The prototype’s local state machine therefore verifies the sequencing of a claims workflow, but not the NHCX protocol’s message security, webhook semantics, idempotency, or certificate trust. Those require future sandbox conformance testing.
 
+<!-- COLUMN_BREAK -->
 ![Fig. 3. Hospital-record-to-FHIR-to-claim workflow, including the locally implemented NHCX-shaped state machine.](docs/paper/figures/claim_flow.png)
 
 ### G. Requirements-to-Evidence Traceability

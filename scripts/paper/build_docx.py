@@ -517,6 +517,11 @@ def _blocks(md: str):
             flush_paragraph()
             table.append(stripped)
             continue
+        if stripped == "<!-- COLUMN_BREAK -->":
+            flush_paragraph()
+            flush_table()
+            blocks.append(("column_break", None))
+            continue
         flush_table()
         if not stripped:
             flush_paragraph()
@@ -626,6 +631,15 @@ def build() -> None:
         elif kind == "image":
             caption, image_path = payload
             _add_image_inline(doc, caption, image_path)
+        elif kind == "column_break":
+            # Force a column break in two-column layout
+            brk = doc.add_paragraph()
+            run = brk.add_run()
+            brk_elem = OxmlElement("w:br")
+            brk_elem.set(qn("w:type"), "column")
+            run._element.append(brk_elem)
+            brk.paragraph_format.space_before = Pt(0)
+            brk.paragraph_format.space_after = Pt(0)
         elif kind == "equation":
             _add_equation(doc, payload)
         elif kind == "references":
