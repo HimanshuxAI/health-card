@@ -46,3 +46,22 @@ def test_wrapped_text_measurement_detects_an_insufficient_box() -> None:
     )
 
     assert measured_height > 0.5
+
+
+def test_overlong_unbreakable_identifier_is_detected_as_horizontal_overflow() -> None:
+    identifier = "0123456789abcdef" * 4
+
+    measured_height = measure_wrapped_text_height(
+        identifier,
+        width_inches=0.8,
+        font_name="Courier New",
+        font_size_pt=12,
+    )
+    single_line_height = measure_wrapped_text_height(
+        "X",
+        width_inches=0.8,
+        font_name="Courier New",
+        font_size_pt=12,
+    )
+
+    assert measured_height > single_line_height * 4

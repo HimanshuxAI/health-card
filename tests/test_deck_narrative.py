@@ -7,6 +7,7 @@ import zxingcpp
 from PIL import Image
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pptx.shapes.base import BaseShape
 from pptx.slide import Slide
 from pptx.util import Inches
 
@@ -65,7 +66,7 @@ def _assert_rotation_aware_bounds(prs: Presentation) -> None:
             assert center_y + half_height <= prs.slide_height + tolerance
 
 
-def _rotated_corners(shape) -> list[tuple[float, float]]:
+def _rotated_corners(shape: BaseShape) -> list[tuple[float, float]]:
     angle = math.radians(shape.rotation or 0.0)
     center_x = shape.left + shape.width / 2
     center_y = shape.top + shape.height / 2
@@ -84,6 +85,48 @@ def _rotated_corners(shape) -> list[tuple[float, float]]:
         )
         for dx, dy in offsets
     ]
+
+
+def _card_local_corners(
+    card: BaseShape, shape: BaseShape
+) -> list[tuple[float, float]]:
+    angle = math.radians(card.rotation or 0.0)
+    card_center_x = card.left + card.width / 2
+    card_center_y = card.top + card.height / 2
+    local_corners: list[tuple[float, float]] = []
+
+    for global_x, global_y in _rotated_corners(shape):
+        delta_x = global_x - card_center_x
+        delta_y = global_y - card_center_y
+        local_x = delta_x * math.cos(angle) + delta_y * math.sin(angle)
+        local_y = -delta_x * math.sin(angle) + delta_y * math.cos(angle)
+        local_corners.append(
+            (local_x + card.width / 2, local_y + card.height / 2)
+        )
+
+    return local_corners
+
+
+def _corners_inside_rounded_rectangle(
+    corners: list[tuple[float, float]],
+    *,
+    width: float,
+    height: float,
+    radius: float,
+    tolerance: float = 0.0,
+) -> bool:
+    for x, y in corners:
+        if x < -tolerance or x > width + tolerance:
+            return False
+        if y < -tolerance or y > height + tolerance:
+            return False
+
+        nearest_x = min(max(x, radius), width - radius)
+        nearest_y = min(max(y, radius), height - radius)
+        if math.hypot(x - nearest_x, y - nearest_y) > radius + tolerance:
+            return False
+
+    return True
 
 
 def test_builds_three_native_narrative_slides_with_exact_copy(tmp_path: Path) -> None:
@@ -189,18 +232,24 @@ def test_tokenized_qr_is_embedded_on_cover_and_solution(tmp_path: Path) -> None:
     assert "SCAN TO RESOLVE" in _texts(prs.slides[2])
 
 
-def test_scan_token_can_come_from_environment(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+@pytest.mark.parametrize(
+    "ambient_token",
+    (VALID_SCAN_TOKEN, "not-a-token"),
+)
+def test_ambient_scan_token_environment_is_ignored(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    ambient_token: str,
 ) -> None:
-    monkeypatch.setenv("ABHA_SCAN_TOKEN", VALID_SCAN_TOKEN)
-    output = tmp_path / "environment-token.pptx"
+    monkeypatch.setenv("ABHA_SCAN_TOKEN", ambient_token)
+    output = tmp_path / "ambient-token.pptx"
 
     build_presentation(output)
 
     prs = Presentation(output)
-    expected_url = f"http://localhost:3000/scan?t={VALID_SCAN_TOKEN}"
-    assert _decoded_picture_urls(prs.slides[0]) == [expected_url]
-    assert _decoded_picture_urls(prs.slides[2]) == [expected_url]
+    generic_url = "http://localhost:3000/scan"
+    assert _decoded_picture_urls(prs.slides[0]) == [generic_url]
+    assert _decoded_picture_urls(prs.slides[2]) == [generic_url]
 
 
 @pytest.mark.parametrize(
@@ -222,15 +271,6 @@ def test_invalid_scan_tokens_are_rejected(
         build_presentation(tmp_path / "invalid.pptx", scan_token=invalid_token)
 
 
-def test_invalid_environment_scan_token_is_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("ABHA_SCAN_TOKEN", "not-a-token")
-
-    with pytest.raises(ValueError, match="32 lowercase hexadecimal"):
-        build_presentation(tmp_path / "invalid-environment.pptx")
-
-
 def test_generic_qr_is_labelled_as_open_scanner(tmp_path: Path) -> None:
     output = tmp_path / "generic.pptx"
 
@@ -246,10 +286,20 @@ def test_generic_qr_is_labelled_as_open_scanner(tmp_path: Path) -> None:
     assert "SCAN TO RESOLVE" not in _texts(prs.slides[2])
 
 
-def test_every_nonempty_text_shape_has_enough_fixed_height(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "scan_token",
+    (
+        pytest.param(None, id="generic"),
+        pytest.param(VALID_SCAN_TOKEN, id="tokenized"),
+    ),
+)
+def test_every_nonempty_text_shape_has_enough_fixed_height(
+    tmp_path: Path, scan_token: str | None
+) -> None:
     output = tmp_path / "text-fit.pptx"
-    build_presentation(output)
+    build_presentation(output, scan_token=scan_token)
     prs = Presentation(output)
+    measured_texts: set[str] = set()
 
     for slide_index, slide in enumerate(list(prs.slides)[:3], start=1):
         for shape in slide.shapes:
@@ -284,12 +334,20 @@ def test_every_nonempty_text_shape_has_enough_fixed_height(tmp_path: Path) -> No
                 bold=bool(run.font.bold),
                 line_spacing=float(line_spacing),
             )
+            measured_texts.add(shape.text)
 
             assert measured_height <= available_height + 0.02, (
                 f"slide {slide_index} text overflows: "
                 f"{shape.text!r} needs {measured_height:.3f}in, "
                 f"has {available_height:.3f}in"
             )
+
+    expected_conditional_labels = (
+        {"OPEN SCANNER", "SCANNER ENTRY"}
+        if scan_token is None
+        else {"SCAN TO RESOLVE", "OPAQUE TOKEN"}
+    )
+    assert expected_conditional_labels.issubset(measured_texts)
 
 
 def test_solution_evidence_is_split_for_layout_slack(tmp_path: Path) -> None:
@@ -331,12 +389,27 @@ def test_patient_card_header_is_inset_within_rounded_card(tmp_path: Path) -> Non
     assert header.width < card.width
     assert card.width - header.width >= Inches(0.2)
 
-    card_top_left, card_top_right, *_ = _rotated_corners(card)
-    header_top_left, header_top_right, *_ = _rotated_corners(header)
-    edge_x_span = card_top_right[0] - card_top_left[0]
-    for header_x, header_y in (header_top_left, header_top_right):
-        assert card_top_left[0] <= header_x <= card_top_right[0]
-        edge_y = card_top_left[1] + (
-            (header_x - card_top_left[0]) / edge_x_span
-        ) * (card_top_right[1] - card_top_left[1])
-        assert header_y >= edge_y - Inches(0.01)
+    radius = min(card.width, card.height) * card.adjustments[0]
+    tolerance = Inches(0.01)
+    local_header_corners = _card_local_corners(card, header)
+    assert _corners_inside_rounded_rectangle(
+        local_header_corners,
+        width=card.width,
+        height=card.height,
+        radius=radius,
+        tolerance=tolerance,
+    )
+
+    protruding_header_corners = [
+        (0.0, 0.0),
+        (float(header.width), 0.0),
+        (float(header.width), float(header.height)),
+        (0.0, float(header.height)),
+    ]
+    assert not _corners_inside_rounded_rectangle(
+        protruding_header_corners,
+        width=card.width,
+        height=card.height,
+        radius=radius,
+        tolerance=tolerance,
+    )

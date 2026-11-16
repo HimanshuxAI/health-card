@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -16,20 +15,17 @@ from deck.theme import new_presentation
 _SCAN_TOKEN_PATTERN = re.compile(r"[0-9a-f]{32}")
 
 
-def _resolve_scan_token(scan_token: str | None) -> str | None:
-    resolved_token = (
-        scan_token if scan_token is not None else os.environ.get("ABHA_SCAN_TOKEN")
-    )
-    if resolved_token is None:
+def _validate_scan_token(scan_token: str | None) -> str | None:
+    if scan_token is None:
         return None
     if (
-        not isinstance(resolved_token, str)
-        or _SCAN_TOKEN_PATTERN.fullmatch(resolved_token) is None
+        not isinstance(scan_token, str)
+        or _SCAN_TOKEN_PATTERN.fullmatch(scan_token) is None
     ):
         raise ValueError(
             "Scan token must be exactly 32 lowercase hexadecimal characters."
         )
-    return resolved_token
+    return scan_token
 
 
 def build_presentation(
@@ -37,7 +33,7 @@ def build_presentation(
 ) -> Path:
     """Build and save the currently implemented narrative slides."""
     output = Path(output)
-    resolved_token = _resolve_scan_token(scan_token)
+    resolved_token = _validate_scan_token(scan_token)
     qr_url = (
         f"{QR_URL}?t={resolved_token}"
         if resolved_token is not None

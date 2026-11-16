@@ -47,6 +47,23 @@ def _load_font(
     return ImageFont.load_default(size=font_px), True
 
 
+def _split_long_word(
+    word: str, *, font: ImageFont.FreeTypeFont, max_width_px: int
+) -> list[str]:
+    chunks: list[str] = []
+    current = ""
+    for character in word:
+        candidate = f"{current}{character}"
+        if current and font.getlength(candidate) > max_width_px:
+            chunks.append(current)
+            current = character
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def _wrap_paragraph(
     text: str, *, font: ImageFont.FreeTypeFont, max_width_px: int
 ) -> list[str]:
@@ -56,6 +73,18 @@ def _wrap_paragraph(
     lines: list[str] = []
     current = ""
     for word in text.split():
+        if font.getlength(word) > max_width_px:
+            if current:
+                lines.append(current)
+            chunks = _split_long_word(
+                word,
+                font=font,
+                max_width_px=max_width_px,
+            )
+            lines.extend(chunks[:-1])
+            current = chunks[-1]
+            continue
+
         candidate = f"{current} {word}".strip()
         if not current or font.getlength(candidate) <= max_width_px:
             current = candidate
@@ -78,8 +107,10 @@ def measure_wrapped_text_height(
     """Measure wrapped PowerPoint text height in inches.
 
     Font sizes use PowerPoint points, rendered at 96 DPI. Explicit newlines
-    start new lines and long paragraphs wrap at word boundaries. The returned
-    height includes an 8% safety factor plus a 0.02-inch minimum margin.
+    start new lines and paragraphs wrap at word boundaries. An unbreakable word
+    wider than the box is split by characters so its overflow cannot pass
+    silently. The returned height includes an 8% safety factor plus a
+    0.02-inch minimum margin.
 
     If a requested macOS font file is absent, matching-weight Arial is used
     and measured at 108% width to remain conservative. If no fallback font file
