@@ -149,6 +149,48 @@ Without SMTP settings, alerts still fire over WebSocket and the email status sho
 
 ---
 
+## Project presentation deck
+
+The 10-slide project review deck (`Group SY1512`) is generated natively — every
+shape, label, and chart is an editable PowerPoint object; the only raster assets
+are real captured UI screenshots and a scannable QR code.
+
+```
+deck/                       deck generator (python-pptx)
+  theme.py                  palette, typography, drawing primitives
+  content.py                approved slide copy + speaker notes (ground truth)
+  slides/narrative.py       1 cover · 2 problem · 3 solution
+  slides/system.py          4 experience · 5 architecture · 6 security
+  slides/report.py          7 interoperability · 8 emergency · 9 evidence · 10 close
+  assets/screenshots/       real seeded UI captures (patient/hospital/admin)
+  validation.py             structural validator (titles, notes, bounds, policy)
+deliverables/
+  ABHA_Health_Card_Project_Deck.pptx   presentation (16:9)
+  ABHA_Health_Card_Project_Deck.pdf    export of the same deck
+```
+
+Rebuild the deck from source:
+
+```
+.venv/bin/pip install -r requirements-deck.txt          # python-pptx, qrcode, Pillow, zxing-cpp
+.venv/bin/python -m pytest tests/test_deck*.py -q       # 144 deck checks must pass
+.venv/bin/python - <<'PY'
+from pathlib import Path
+from deck.builder import build_presentation
+build_presentation(
+    Path("deliverables/ABHA_Health_Card_Project_Deck.pptx"),
+    scan_token="7a77757b0d71ee9458ed14b0c3a93377",       # active token in records.db
+)
+PY
+```
+
+The embedded QR encodes `http://localhost:3000/scan?t=<token>`; without a
+`scan_token` it encodes the scanner entry URL and is labeled accordingly. Every
+slide carries speaker notes, and the validator enforces the approved titles,
+bounds, text-fit, and the no-gradient / limited-rounded-card visual policy.
+
+---
+
 ## Repository layout
 
 ```
@@ -162,5 +204,6 @@ services/
   sos/             alerts, websocket broadcast, SMTP mailer
 gateway/           NGINX configuration
 scripts/           seed.py (orchestrator), e2e.py (live smoke test)
+deck/              10-slide presentation generator + deliverables
 docs/              design spec and implementation plan
 ```
