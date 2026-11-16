@@ -24,6 +24,7 @@
 - All required section headings and all six labeled tables are present.
 - Three generated figures are embedded.
 - The DOCX archive passes integrity validation.
+- Estimated page count is approximately **8–10 pages** in the two-column IJIRT layout; a single-column PDF conversion rendered **14 pages**, consistent with about 7–8 pages when split into two columns.
 - A 7-word n-gram overlap scan against the supplied synopsis and IJIRT template reported:
   - **0.02% overlap** with the project synopsis.
   - **0.00% overlap** with the IJIRT template.
