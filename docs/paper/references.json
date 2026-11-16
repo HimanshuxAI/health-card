@@ -1,0 +1,255 @@
+{
+  "accessed_date": "2026-11-16",
+  "references": [
+    {
+      "id": 1,
+      "citation": "R. S. Sharma, A. Rohatgi, S. Jain, and D. Singh, \"The Ayushman Bharat Digital Mission (ABDM): making of India's Digital Health Story,\" CSI Transactions on ICT, vol. 11, no. 1, pp. 3-9, 2023.",
+      "title": "The Ayushman Bharat Digital Mission (ABDM): making of India's Digital Health Story",
+      "doi": "10.1007/s40012-023-00375-0",
+      "url": "https://doi.org/10.1007/s40012-023-00375-0",
+      "venue": "CSI Transactions on ICT",
+      "year": 2023,
+      "source_type": "periodical"
+    },
+    {
+      "id": 2,
+      "citation": "U. S. Mishra, S. Yadav, and W. Joe, \"The Ayushman Bharat Digital Mission of India: An assessment,\" Health Systems & Reform, vol. 10, no. 2, article 2392290, 2024.",
+      "title": "The Ayushman Bharat Digital Mission of India: An assessment",
+      "doi": "10.1080/23288604.2024.2392290",
+      "url": "https://doi.org/10.1080/23288604.2024.2392290",
+      "venue": "Health Systems & Reform",
+      "year": 2024,
+      "source_type": "periodical"
+    },
+    {
+      "id": 3,
+      "citation": "M. Mantri, G. Sunder, S. Kadam, and A. Abhyankar, \"A perspective on digital health platform design and its implementation at national level,\" Frontiers in Digital Health, vol. 6, article 1260855, 2024.",
+      "title": "A perspective on digital health platform design and its implementation at national level",
+      "doi": "10.3389/fdgth.2024.1260855",
+      "url": "https://doi.org/10.3389/fdgth.2024.1260855",
+      "venue": "Frontiers in Digital Health",
+      "year": 2024,
+      "source_type": "periodical"
+    },
+    {
+      "id": 4,
+      "citation": "National Resource Center for EHR Standards, FHIR Implementation Guide for ABDM, version 6.5.0, May 2025. [Online]. Available: https://www.nrces.in/ndhm/fhir/r4/index.html",
+      "title": "FHIR Implementation Guide for ABDM",
+      "url": "https://www.nrces.in/ndhm/fhir/r4/index.html",
+      "publisher": "National Resource Center for EHR Standards",
+      "version": "6.5.0",
+      "year": 2025,
+      "source_type": "standard"
+    },
+    {
+      "id": 5,
+      "citation": "National Health Authority, NHCX Developer Documentation: Claim Settlement, version 1, updated Oct. 2026. [Online]. Available: https://docs.abdm.gov.in/docs/nhcx/v1",
+      "title": "NHCX Developer Documentation: Claim Settlement",
+      "url": "https://docs.abdm.gov.in/docs/nhcx/v1",
+      "publisher": "National Health Authority",
+      "version": "1",
+      "year": 2026,
+      "source_type": "standard"
+    },
+    {
+      "id": 6,
+      "citation": "National Health Authority, NHCX Implementation Guide for Payers, 2026-27. [Online]. Available: https://abdm.gov.in/strapicms/uploads/NHCX_Implementation_Guide_for_Payers_2026_1_66f3fbcee1.pdf",
+      "title": "NHCX Implementation Guide for Payers",
+      "url": "https://abdm.gov.in/strapicms/uploads/NHCX_Implementation_Guide_for_Payers_2026_1_66f3fbcee1.pdf",
+      "publisher": "National Health Authority",
+      "year": 2026,
+      "source_type": "standard"
+    },
+    {
+      "id": 7,
+      "citation": "National Health Authority, Integrator Guide ABDM ABHA V3 APIs, version 1.2, Oct. 2024. [Online]. Available: https://sandboxcms.abdm.gov.in/uploads/ABDM_ABHA_V3_AP_Is_SOP_V1_1_4_faef8099bd.pdf",
+      "title": "Integrator Guide ABDM ABHA V3 APIs",
+      "url": "https://sandboxcms.abdm.gov.in/uploads/ABDM_ABHA_V3_AP_Is_SOP_V1_1_4_faef8099bd.pdf",
+      "publisher": "National Health Authority",
+      "version": "1.2",
+      "year": 2024,
+      "source_type": "standard"
+    },
+    {
+      "id": 8,
+      "citation": "National Health Authority, Sandbox Documentation: ABDM Scan and Share, version 1.0, Aug. 2024. [Online]. Available: https://sandboxcms.abdm.gov.in/uploads/Scan_and_share_Document_Updated_1_0_22_Aug_2024_c1b570cbf6.pdf",
+      "title": "Sandbox Documentation: ABDM Scan and Share",
+      "url": "https://sandboxcms.abdm.gov.in/uploads/Scan_and_share_Document_Updated_1_0_22_Aug_2024_c1b570cbf6.pdf",
+      "publisher": "National Health Authority",
+      "version": "1.0",
+      "year": 2024,
+      "source_type": "standard"
+    },
+    {
+      "id": 9,
+      "citation": "Health Level Seven International, HL7 FHIR Release 4, version 4.0.1, 2019. [Online]. Available: https://hl7.org/fhir/R4/",
+      "title": "HL7 FHIR Release 4",
+      "url": "https://hl7.org/fhir/R4/",
+      "publisher": "Health Level Seven International",
+      "version": "4.0.1",
+      "year": 2019,
+      "source_type": "standard"
+    },
+    {
+      "id": 10,
+      "citation": "M. Ayaz, M. F. Pasha, M. Y. Alzahrani, R. Budiarto, and D. Stiawan, \"The Fast Healthcare Interoperability Resources (FHIR) standard: Systematic literature review of implementations, applications, challenges and opportunities,\" JMIR Medical Informatics, vol. 9, no. 7, article e21929, 2021.",
+      "title": "The Fast Healthcare Interoperability Resources (FHIR) standard: Systematic literature review of implementations, applications, challenges and opportunities",
+      "doi": "10.2196/21929",
+      "url": "https://doi.org/10.2196/21929",
+      "venue": "JMIR Medical Informatics",
+      "year": 2021,
+      "source_type": "periodical"
+    },
+    {
+      "id": 11,
+      "citation": "D. Kapitan, F. Heddema, A. Dekker, M. Sieswerda, B.-J. Verhoeff, and M. Berg, \"Data interoperability in context: The importance of open-source implementations when choosing open standards,\" Journal of Medical Internet Research, vol. 27, article e66616, 2025.",
+      "title": "Data interoperability in context: The importance of open-source implementations when choosing open standards",
+      "doi": "10.2196/66616",
+      "url": "https://doi.org/10.2196/66616",
+      "venue": "Journal of Medical Internet Research",
+      "year": 2025,
+      "source_type": "periodical"
+    },
+    {
+      "id": 12,
+      "citation": "J. C. Mandel, D. A. Kreda, K. D. Mandl, I. S. Kohane, and R. B. Ramoni, \"SMART on FHIR: A standards-based, interoperable apps platform for electronic health records,\" Journal of the American Medical Informatics Association, vol. 23, no. 5, pp. 899-908, 2016.",
+      "title": "SMART on FHIR: A standards-based, interoperable apps platform for electronic health records",
+      "doi": "10.1093/jamia/ocv189",
+      "url": "https://doi.org/10.1093/jamia/ocv189",
+      "venue": "Journal of the American Medical Informatics Association",
+      "year": 2016,
+      "source_type": "periodical"
+    },
+    {
+      "id": 13,
+      "citation": "V. Uzun and S. Bilgin, \"Evaluation and implementation of QR Code Identity Tag system for Healthcare in Turkey,\" SpringerPlus, vol. 5, no. 1, article 1454, 2016.",
+      "title": "Evaluation and implementation of QR Code Identity Tag system for Healthcare in Turkey",
+      "doi": "10.1186/s40064-016-3020-9",
+      "url": "https://doi.org/10.1186/s40064-016-3020-9",
+      "venue": "SpringerPlus",
+      "year": 2016,
+      "source_type": "periodical"
+    },
+    {
+      "id": 14,
+      "citation": "M. A. Vella, H. Li, P. M. Reilly, and S. S. Raza, \"Unlocked yet untapped: The ubiquitous smartphone and utilization of emergency medical identification technology in the care of the injured patient,\" Surgery Open Science, vol. 2, no. 3, pp. 122-126, 2020.",
+      "title": "Unlocked yet untapped: The ubiquitous smartphone and utilization of emergency medical identification technology in the care of the injured patient",
+      "doi": "10.1016/j.sopen.2020.03.001",
+      "url": "https://doi.org/10.1016/j.sopen.2020.03.001",
+      "venue": "Surgery Open Science",
+      "year": 2020,
+      "source_type": "periodical"
+    },
+    {
+      "id": 15,
+      "citation": "N. Bouri and S. Ravi, \"Going mobile: How mobile personal health records can improve health care during emergencies,\" JMIR mHealth and uHealth, vol. 2, no. 1, article e8, 2014.",
+      "title": "Going mobile: How mobile personal health records can improve health care during emergencies",
+      "doi": "10.2196/mhealth.3017",
+      "url": "https://doi.org/10.2196/mhealth.3017",
+      "venue": "JMIR mHealth and uHealth",
+      "year": 2014,
+      "source_type": "periodical"
+    },
+    {
+      "id": 16,
+      "citation": "A. Faggiano, F. Fioretti, S. Nodari, and S. Carugo, \"Quick response code applications in medical and cardiology settings: A systematic scoping review,\" European Heart Journal - Digital Health, vol. 2, no. 2, pp. 336-341, 2021.",
+      "title": "Quick response code applications in medical and cardiology settings: A systematic scoping review",
+      "doi": "10.1093/ehjdh/ztab038",
+      "url": "https://doi.org/10.1093/ehjdh/ztab038",
+      "venue": "European Heart Journal - Digital Health",
+      "year": 2021,
+      "source_type": "periodical"
+    },
+    {
+      "id": 17,
+      "citation": "F. Aljumah, R. H. M. Leung, M. Pourzandi, and M. Debbabi, \"Emergency mobile access to personal health records stored on an untrusted cloud,\" in Health Information Science, Lecture Notes in Computer Science, vol. 7798, Berlin, Germany: Springer, 2013, pp. 30-41.",
+      "title": "Emergency mobile access to personal health records stored on an untrusted cloud",
+      "doi": "10.1007/978-3-642-37899-7_3",
+      "url": "https://doi.org/10.1007/978-3-642-37899-7_3",
+      "venue": "Health Information Science",
+      "year": 2013,
+      "source_type": "conference"
+    },
+    {
+      "id": 18,
+      "citation": "F. Jin, B. Wang, X. Liao, K. Wang, W. Huang, and T. Wang, \"Exploring data security risks associated with trauma medical data within hospitals in China: A qualitative study,\" BMJ Open, vol. 15, no. 2, article e085221, 2025.",
+      "title": "Exploring data security risks associated with trauma medical data within hospitals in China: A qualitative study",
+      "doi": "10.1136/bmjopen-2024-085221",
+      "url": "https://doi.org/10.1136/bmjopen-2024-085221",
+      "venue": "BMJ Open",
+      "year": 2025,
+      "source_type": "periodical"
+    },
+    {
+      "id": 19,
+      "citation": "P. Shojaei, E. Vlahu-Gjorgievska, and Y.-W. Chow, \"Security and privacy of technologies in health information systems: A systematic literature review,\" Computers, vol. 13, no. 2, article 41, 2024.",
+      "title": "Security and privacy of technologies in health information systems: A systematic literature review",
+      "doi": "10.3390/computers13020041",
+      "url": "https://doi.org/10.3390/computers13020041",
+      "venue": "Computers",
+      "year": 2024,
+      "source_type": "periodical"
+    },
+    {
+      "id": 20,
+      "citation": "A. Shamir, \"How to share a secret,\" Communications of the ACM, vol. 22, no. 11, pp. 612-613, 1979.",
+      "title": "How to share a secret",
+      "doi": "10.1145/359168.359176",
+      "url": "https://doi.org/10.1145/359168.359176",
+      "venue": "Communications of the ACM",
+      "year": 1979,
+      "source_type": "periodical"
+    },
+    {
+      "id": 21,
+      "citation": "R. M. Needham and M. D. Schroeder, \"Using encryption for authentication in large networks of computers,\" Communications of the ACM, vol. 21, no. 12, pp. 993-999, 1978.",
+      "title": "Using encryption for authentication in large networks of computers",
+      "doi": "10.1145/359657.359659",
+      "url": "https://doi.org/10.1145/359657.359659",
+      "venue": "Communications of the ACM",
+      "year": 1978,
+      "source_type": "periodical"
+    },
+    {
+      "id": 22,
+      "citation": "D. Hardt, Ed., \"The OAuth 2.0 Authorization Framework,\" RFC 6749, Internet Engineering Task Force, Oct. 2012. [Online]. Available: https://www.rfc-editor.org/info/rfc6749/",
+      "title": "The OAuth 2.0 Authorization Framework",
+      "url": "https://www.rfc-editor.org/info/rfc6749/",
+      "publisher": "Internet Engineering Task Force",
+      "version": "RFC 6749",
+      "year": 2012,
+      "source_type": "standard"
+    },
+    {
+      "id": 23,
+      "citation": "I. Fette and A. Melnikov, \"The WebSocket Protocol,\" RFC 6455, Internet Engineering Task Force, Dec. 2011. [Online]. Available: https://www.rfc-editor.org/info/rfc6455/",
+      "title": "The WebSocket Protocol",
+      "url": "https://www.rfc-editor.org/info/rfc6455/",
+      "publisher": "Internet Engineering Task Force",
+      "version": "RFC 6455",
+      "year": 2011,
+      "source_type": "standard"
+    },
+    {
+      "id": 24,
+      "citation": "J. Klensin, \"Simple Mail Transfer Protocol,\" RFC 5321, Internet Engineering Task Force, Oct. 2008. [Online]. Available: https://www.rfc-editor.org/info/rfc5321/",
+      "title": "Simple Mail Transfer Protocol",
+      "url": "https://www.rfc-editor.org/info/rfc5321/",
+      "publisher": "Internet Engineering Task Force",
+      "version": "RFC 5321",
+      "year": 2008,
+      "source_type": "standard"
+    },
+    {
+      "id": 25,
+      "citation": "D. Temoshok, D. Proud-Madruga, Y.-Y. Choong, R. Galluzzo, S. Gupta, C. LaSalle, N. Lefkovitz, and A. Regenscheid, Digital Identity Guidelines, NIST Special Publication 800-63-4, Aug. 2025.",
+      "title": "Digital Identity Guidelines",
+      "doi": "10.6028/NIST.SP.800-63-4",
+      "url": "https://doi.org/10.6028/NIST.SP.800-63-4",
+      "publisher": "National Institute of Standards and Technology",
+      "version": "Special Publication 800-63-4",
+      "year": 2025,
+      "source_type": "standard"
+    }
+  ]
+}

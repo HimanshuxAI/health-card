@@ -1,0 +1,82 @@
+{
+  "abstract_word_count": 210,
+  "compressed_archive": true,
+  "detected_forbidden_phrases": [],
+  "file": "/Users/himanshu/.local/share/opencode/worktree/48d875/ijirt-abha-health-card-paper/IJIRT_ABHA_Health_Card_Paper.docx",
+  "images": 3,
+  "intentional_author_placeholders": 2,
+  "missing_citations": [],
+  "missing_headings": [],
+  "missing_table_titles": [],
+  "passed": true,
+  "references": 25,
+  "sections": [
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 1,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 2,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 1,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 2,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 1,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 2,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 1,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    },
+    {
+      "bottom_margin_inches": 1.0,
+      "columns": 2,
+      "left_margin_inches": 1.0,
+      "right_margin_inches": 1.0,
+      "top_margin_inches": 1.0
+    }
+  ],
+  "table_titles_present": [
+    "I",
+    "II",
+    "III",
+    "IV",
+    "V",
+    "VI"
+  ],
+  "tables": 7,
+  "total_word_count": 5954,
+  "unresolved_tokens": []
+}

@@ -1,0 +1,18 @@
+[PASS] health/identity 
+[PASS] health/records 
+[PASS] health/abdm 
+[PASS] health/nhcx 
+[PASS] health/sos 
+[PASS] login patient 
+[PASS] login hospital 
+[PASS] hospital lists patient records (consent ok) 
+[PASS] emergency resolve <800ms (0ms)
+[PASS] hospital creates record 
+[PASS] FHIR conversion + care context 
+[PASS] bill created 
+[PASS] claim submitted to NHCX 
+[PASS] claim adjudicated 
+[PASS] SOS alert dispatched 
+[PASS] ABDM integration trace 
+
+ALL PASS: 16/16

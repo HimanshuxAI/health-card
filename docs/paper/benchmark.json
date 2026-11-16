@@ -1,0 +1,36 @@
+{
+  "all_http_statuses": [
+    200
+  ],
+  "benchmark_name": "emergency_qr_token_resolution",
+  "environment": {
+    "captured_at": "2026-11-16T04:50:57.782569+00:00",
+    "cpu_count": 10,
+    "machine": "arm64",
+    "platform": "macOS-26.7.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "python": "3.13.12",
+    "python_command": "/Users/himanshu/.local/share/opencode/worktree/48d875/ijirt-abha-health-card-paper/.venv/bin/python --version",
+    "python_version_output": "Python 3.13.12"
+  },
+  "interpretation": "Local in-process timing; excludes TLS, browser, QR capture, and network latency.",
+  "measured_requests": 1000,
+  "protocol": "FastAPI TestClient against isolated temporary records service",
+  "service_reported_resolution": {
+    "max_ms": 1,
+    "mean_ms": 0.001,
+    "min_ms": 0,
+    "p50_ms": 0,
+    "p95_ms": 0,
+    "samples": 1000
+  },
+  "wall_time": {
+    "max_ms": 1.908,
+    "mean_ms": 0.661,
+    "min_ms": 0.612,
+    "p50_ms": 0.644,
+    "p95_ms": 0.743,
+    "samples": 1000
+  },
+  "warmup_requests": 50
+}
