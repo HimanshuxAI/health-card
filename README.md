@@ -17,8 +17,14 @@ government sandbox is called, so the project runs with no external dependency.
 
 ## Live demo
 
-The project site, with the architecture diagram and the run instructions, is published at
-https://himanshuxai.github.io/health-card/
+| | |
+|---|---|
+| The app | https://health-card-2856.onrender.com |
+| The project site | https://himanshuxai.github.io/health-card/ |
+
+The app runs on Render's free instance, which sleeps after 15 minutes without a request, so the
+first visit after a quiet spell takes up to a minute to wake. Sign in with any account from
+[Demo accounts](#demo-accounts); the password is `abha1234`.
 
 ---
 
@@ -381,7 +387,7 @@ The workflow is `.github/workflows/pages.yml` and it publishes the `site/` direc
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest                        # 22 unit and integration tests
+.venv/bin/python -m pytest                        # 23 unit and integration tests
 .venv/bin/python scripts/e2e.py                   # 18-step live smoke test, services must be running
 cd frontend && npm test                           # 17 frontend tests (vitest)
 cd frontend && npx next typegen && npx tsc --noEmit
