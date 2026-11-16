@@ -55,10 +55,15 @@ def main():
     r = c.get(f"{BASE['records']}/records", params={"patient_id": pid}, headers=hauth)
     step("hospital lists patient records (consent ok)", r.status_code == 200)
 
-    # find the patient's active QR token via records DB-backed endpoint:
-    # hospital flow first uses /scan -> need token. Patient regenerates:
-    r = c.post(f"{BASE['records']}/emergency/qr", headers=pauth)
+    # Read the patient's active QR token. This is a GET on purpose: running the
+    # smoke test must not rotate the card, because a card may already be
+    # printed. Rotating is a deliberate POST the patient triggers.
+    r = c.get(f"{BASE['records']}/emergency/qr", headers=pauth)
+    step("emergency card read does not rotate", r.status_code == 200)
     token = r.json()["token"]
+    again = c.get(f"{BASE['records']}/emergency/qr", headers=pauth).json()["token"]
+    step("emergency card token is stable", again == token)
+
     r = c.get(f"{BASE['records']}/emergency/resolve/{token}")
     step("emergency resolve <800ms", r.status_code == 200 and r.json()["retrieved_in_ms"] < 800, f"({r.json()['retrieved_in_ms']}ms)")
 

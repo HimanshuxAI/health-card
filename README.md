@@ -266,14 +266,14 @@ The workflow is `.github/workflows/pages.yml` and it publishes the `site/` direc
 
 ```bash
 .venv/bin/python -m pytest                        # 22 unit and integration tests
-.venv/bin/python scripts/e2e.py                   # 16-step live smoke test, services must be running
+.venv/bin/python scripts/e2e.py                   # 18-step live smoke test, services must be running
 cd frontend && npm test                           # 17 frontend tests (vitest)
 cd frontend && npx next typegen && npx tsc --noEmit
 ```
 
 The smoke test covers the whole path: login for all three roles, a consent-gated record read,
-emergency token issue and resolve, record creation, FHIR conversion, bill creation, claim
-submission, adjudication, an SOS alert and the ABDM trace.
+an emergency card read that leaves the token in place and its resolve, record creation, FHIR
+conversion, bill creation, claim submission, adjudication, an SOS alert and the ABDM trace.
 
 The frontend tests cover the QR path: the token helpers, the camera component, and a check that
 the code printed on the card keeps its four-module quiet zone and decodes back to the scan
