@@ -7,6 +7,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.presentation import Presentation
 from pptx.shapes.base import BaseShape
+from pptx.text.text import _Run
 from pptx.util import Inches, Pt
 
 from deck.content import SLIDES
@@ -32,7 +33,9 @@ from deck.theme import (
 QR_URL = "http://localhost:3000/scan"
 
 
-def _style_run(run, *, font: str, size: float, color: RGBColor, bold: bool = False) -> None:
+def _style_run(
+    run: _Run, *, font: str, size: float, color: RGBColor, bold: bool = False
+) -> None:
     run.font.name = font
     run.font.size = Pt(size)
     run.font.color.rgb = color
@@ -99,13 +102,27 @@ def _require_qr(qr_path: Path | None) -> Path:
     return qr_path
 
 
+def _qr_has_token(qr_url: str, scan_token: str | None) -> bool:
+    expected_url = (
+        f"{QR_URL}?t={scan_token}" if scan_token is not None else QR_URL
+    )
+    if qr_url != expected_url:
+        raise ValueError("QR URL and scan-token state do not match.")
+    return scan_token is not None
+
+
 def build_cover(
-    prs: Presentation, qr_path: Path | None = None
+    prs: Presentation,
+    qr_path: Path | None = None,
+    *,
+    qr_url: str = QR_URL,
+    scan_token: str | None = None,
 ) -> SlideFrame:
     """Build the emergency-passport cover slide."""
     copy = SLIDES[0]
     frame = add_slide(prs, copy.index, copy.section, dark=True)
     qr_path = _require_qr(qr_path)
+    has_token = _qr_has_token(qr_url, scan_token)
 
     # A 17% rescue spine establishes the emergency-dossier motif.
     add_rect(frame, 0, 0, 13.333 * 0.17, 7.5, fill=CORAL)
@@ -197,7 +214,14 @@ def build_cover(
 
     card_parts: list[BaseShape] = []
     card_parts.append(
-        add_rect(frame, card_x, card_y, card_w, 0.13, fill=CORAL)
+        add_rect(
+            frame,
+            card_x + 0.20,
+            card_y + 0.08,
+            card_w - 0.40,
+            0.13,
+            fill=CORAL,
+        )
     )
     card_parts.append(
         add_text(
@@ -286,7 +310,7 @@ def build_cover(
     card_parts.append(
         add_text(
             frame,
-            "OPAQUE TOKEN",
+            "OPAQUE TOKEN" if has_token else "SCANNER ENTRY",
             card_x + 1.90,
             card_y + 4.15,
             card_w - 2.20,
@@ -299,7 +323,7 @@ def build_cover(
     card_parts.append(
         add_text(
             frame,
-            "SCAN TO RESOLVE",
+            "SCAN TO RESOLVE" if has_token else "OPEN SCANNER",
             card_x + 1.90,
             card_y + 4.50,
             card_w - 2.20,
@@ -392,9 +416,9 @@ def build_problem(
         frame,
         "03:12",
         0.82,
-        0.66,
+        0.64,
         3.1,
-        1.38,
+        1.50,
         font=DISPLAY_FONT,
         size=84,
         color=BLACK,
@@ -403,14 +427,14 @@ def build_problem(
         frame,
         "AM · CITY HOSPITAL",
         0.87,
-        2.13,
+        2.20,
         2.85,
         0.24,
         size=9.5,
         color=MUTED,
         bold=True,
     )
-    add_line(frame, 0.87, 2.48, 3.68, 2.48, color=BLACK, width=1.0)
+    add_line(frame, 0.87, 2.55, 3.68, 2.55, color=BLACK, width=1.0)
 
     add_text(
         frame,
@@ -522,12 +546,17 @@ def build_problem(
 
 
 def build_solution(
-    prs: Presentation, qr_path: Path | None = None
+    prs: Presentation,
+    qr_path: Path | None = None,
+    *,
+    qr_url: str = QR_URL,
+    scan_token: str | None = None,
 ) -> SlideFrame:
     """Build the one-scan emergency-resolution slide."""
     copy = SLIDES[2]
     frame = add_slide(prs, copy.index, copy.section)
     qr_path = _require_qr(qr_path)
+    has_token = _qr_has_token(qr_url, scan_token)
 
     add_text(
         frame,
@@ -552,7 +581,7 @@ def build_solution(
     add_rect(frame, 0.64, 2.95, 3.88, 0.055, fill=CORAL)
     add_text(
         frame,
-        "SCAN /scan",
+        "SCAN TO RESOLVE" if has_token else "OPEN SCANNER",
         0.80,
         5.00,
         3.56,
@@ -605,17 +634,22 @@ def build_solution(
             bold=True,
         )
 
-    add_text(
-        frame,
-        "  /  ".join(copy.evidence),
-        5.00,
-        4.60,
-        7.35,
-        0.26,
-        font=MONO_FONT,
-        size=9,
-        color=MUTED,
-    )
+    for x, y, w, evidence in (
+        (5.00, 4.55, 2.30, copy.evidence[0]),
+        (7.40, 4.55, 3.10, copy.evidence[1]),
+        (5.00, 4.83, 3.50, copy.evidence[2]),
+    ):
+        add_text(
+            frame,
+            evidence,
+            x,
+            y,
+            w,
+            0.22,
+            font=MONO_FONT,
+            size=9,
+            color=MUTED,
+        )
 
     add_text(
         frame,
