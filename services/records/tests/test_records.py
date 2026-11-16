@@ -16,8 +16,20 @@ from records_app.crypto import seal  # noqa: E402
 from services.shared import security  # noqa: E402
 
 from records_app.main import app  # noqa: E402
+from records_app.demo import demo_card_token  # noqa: E402
 
 client = TestClient(app)
+
+
+def test_seeded_demo_card_is_the_same_every_time():
+    """A host without a persistent volume rebuilds the database on every boot.
+
+    If the seeded card token were random, the code printed on a patient's card
+    would stop resolving each time the service restarted.
+    """
+    assert demo_card_token("aarav@abha.dev") == demo_card_token("aarav@abha.dev")
+    assert len(demo_card_token("aarav@abha.dev")) == 32
+    assert demo_card_token("aarav@abha.dev") != demo_card_token("diya@abha.dev")
 
 
 def _claim(user_id: int, role: str, abha_id: str | None = None):

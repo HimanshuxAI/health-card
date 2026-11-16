@@ -1,0 +1,39 @@
+# Render Blueprint: the whole stack as one free web service.
+#
+# Point Render at this repository and it reads this file. There is no card
+# requirement on a Free instance, and nothing to configure by hand.
+#
+# What the Free plan means for this app, in full:
+#
+#   - 0.1 CPU and 512 MB of RAM. The container measures 321 MB, so it fits.
+#   - No persistent disk, and disks are not offered on Free. The filesystem is
+#     wiped whenever the service spins down, restarts or redeploys.
+#   - It spins down after 15 minutes without a request and takes about a
+#     minute to wake, so the first visit after a quiet spell is slow. The URL
+#     itself stays valid, so a scanned card still resolves.
+#   - 750 instance hours a month. Spun-down time does not count.
+#
+# Because the disk is wiped, the seed runs again on every boot. That is why
+# the seeded demo card uses a derived token rather than a random one
+# (services/records/records_app/demo.py): the code printed on a card keeps
+# resolving across restarts. Records, bills and claims created through the
+# interface are lost on a restart, which makes this a demo host rather than
+# somewhere to keep data.
+
+services:
+  - type: web
+    name: health-card
+    runtime: docker
+    plan: free
+    region: oregon
+    # Paths are relative to the repository root.
+    dockerfilePath: ./deploy/allinone/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/identity/health
+    envVars:
+      # Render generates these once and keeps them. The defaults in the image
+      # are demo values, which is fine locally but not for a public address.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SHARED_TOKEN
+        generateValue: true

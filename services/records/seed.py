@@ -2,7 +2,6 @@
 
 import json
 import os
-import secrets
 import sqlite3
 import sys
 from datetime import datetime, timezone
@@ -15,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))  # repo root
 from records_app import models
 from records_app.main import engine, SessionLocal
 from records_app.crypto import seal
+from records_app.demo import demo_card_token
 from services.shared.db import Base
 
 # Where the identity service keeps its database. The environment variable wins
@@ -125,7 +125,10 @@ def seed():
                 patient_id=uid, encrypted_blob=data_hex, nonce=nonce_hex, hmac_sha256=sig, updated_at=datetime.now(timezone.utc)
             )
         )
-        db.add(models.QrToken(patient_id=uid, token=secrets.token_hex(16), active=True))
+        # Derived, not random: see records_app/demo.py. A host without a
+        # persistent volume re-seeds on every boot, and a card that changed
+        # each time would stop working.
+        db.add(models.QrToken(patient_id=uid, token=demo_card_token(email), active=True))
 
     for patient_email, hospital_email, rtype, title, details in RECORDS:
         uid = users[patient_email]["id"]

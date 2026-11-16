@@ -236,7 +236,37 @@ Supervisord runs the seed once at startup and then the five services, the fronte
 seed is idempotent, so a restart re-uses the database on the volume instead of replacing it, and a
 card that was already printed keeps working.
 
+### Render: free, and no card
+
+Render's Free instance is the easiest free host for this app, and the only one that asks for no
+payment method. `render.yaml` in the repository root describes everything, so a deploy is:
+**New → Blueprint → point at this repository**.
+
+What the Free plan gives and costs, in full:
+
+| | |
+|---|---|
+| Compute | 0.1 CPU, 512 MB RAM. The container measures 321 MB, so it fits. |
+| Card | Not required |
+| Persistent disk | **Not available on Free.** Disks are paid-only. |
+| Idle | Spins down after 15 minutes without a request, wakes in about a minute |
+| Hours | 750 instance hours a month; spun-down time does not count |
+
+The URL stays valid while the service is asleep, so a scanned card still resolves — the first
+request after a quiet spell just waits for the wake-up.
+
+The filesystem is wiped whenever the service spins down, restarts, or redeploys, and the seed then
+runs again. That is the reason the seeded demo card token is *derived* rather than random
+(`services/records/records_app/demo.py`): the same card comes back every time, so a printed code
+keeps working. Records, bills and claims created through the interface are not kept — this is a
+demo host, not somewhere to store data. A token a patient issues with **Regenerate card** is still
+random, and is lost when the service restarts.
+
 ### Northflank: a free host that keeps a volume
+
+Northflank keeps a persistent volume on its free tier, but creating a service **requires a card on
+file**, whatever the pricing page implies, so it is only worth using if you are willing to add one.
+When you are, it is the better deployment: the volume means data survives, and it does not sleep.
 
 Northflank's free Sandbox tier is the one free tier left that suits this app: two services, one
 database, persistent volumes, and compute that does not sleep. Its docs say it is not meant for
