@@ -7,7 +7,8 @@
 #   docker-compose.ghcr.yml   the compose file it starts
 #   gateway/nginx.conf        the gateway configuration it mounts
 #   keepalive.sh              the watchdog
-#   tunnel.sh                 the tunnel launcher
+#   tunnel.sh                 the quick-tunnel launcher
+#   funnel.sh                 the Tailscale Funnel launcher
 #   .tools/cloudflared        the tunnel binary, if it is present
 #
 # Two agents are written into ~/Library/LaunchAgents:
@@ -30,7 +31,8 @@ cp "$REPO/docker-compose.ghcr.yml" "$INSTALL_DIR/docker-compose.ghcr.yml"
 cp "$REPO/gateway/nginx.conf" "$INSTALL_DIR/gateway/nginx.conf"
 cp "$REPO/scripts/keepalive.sh" "$INSTALL_DIR/keepalive.sh"
 cp "$REPO/scripts/tunnel.sh" "$INSTALL_DIR/tunnel.sh"
-chmod +x "$INSTALL_DIR/keepalive.sh" "$INSTALL_DIR/tunnel.sh"
+cp "$REPO/scripts/funnel.sh" "$INSTALL_DIR/funnel.sh"
+chmod +x "$INSTALL_DIR/keepalive.sh" "$INSTALL_DIR/tunnel.sh" "$INSTALL_DIR/funnel.sh"
 
 if [ -x "$REPO/.tools/cloudflared" ]; then
   cp "$REPO/.tools/cloudflared" "$INSTALL_DIR/.tools/cloudflared"

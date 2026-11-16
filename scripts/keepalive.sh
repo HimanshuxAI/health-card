@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Keeps the published stack and the public tunnel running on this machine.
+# Keeps the published stack and the public address running on this machine.
 #
 # The watchdog wakes up every 30 seconds and does three things:
 #
 #   1. starts any service of the stack that is not running
-#   2. restarts the tunnel if the process has died
+#   2. makes sure the stack has a public address: Tailscale Funnel when it is
+#      configured, otherwise a cloudflared quick tunnel, restarting whichever
+#      one is in use if it has died
 #   3. writes the current public address to the state directory
 #
 # It is meant to run under launchd. scripts/install-mac-service.sh copies the
@@ -13,8 +15,8 @@
 set -uo pipefail
 
 # launchd starts jobs with a minimal PATH, and the Docker CLI lives in
-# /usr/local/bin.
-export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+# /usr/local/bin. The Tailscale CLI from the App Store build is here too.
+export PATH="/usr/local/bin:/opt/homebrew/bin:/Applications/Tailscale.app/Contents/MacOS:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="${ABHA_PROJECT:-health-card-live}"
@@ -22,6 +24,9 @@ COMPOSE="$ROOT/docker-compose.ghcr.yml"
 STATE_DIR="${ABHA_STATE_DIR:-$HOME/.local/state/health-card}"
 TUNNEL_LOG="$STATE_DIR/tunnel.log"
 URL_FILE="$STATE_DIR/public-url.txt"
+# Written by scripts/funnel.sh once Funnel has been set up, so the watchdog
+# knows the stable address is the intended one.
+FUNNEL_FILE="$STATE_DIR/funnel-enabled"
 
 # Services that run once and finish, and are therefore not expected to stay
 # up. Every other service in the compose file has to keep running.
@@ -49,15 +54,33 @@ while true; do
     docker compose -p "$PROJECT" -f "$COMPOSE" up -d >>"$STATE_DIR/keepalive.log" 2>&1 || true
   fi
 
-  # 2. the tunnel
-  if ! pgrep -f "cloudflared .*tunnel" >/dev/null 2>&1; then
-    log "tunnel is not running, starting it"
-    nohup "$ROOT/tunnel.sh" >>"$TUNNEL_LOG" 2>&1 &
-    sleep 15
+  # 2. the public address.
+  #
+  # Tailscale Funnel is preferred when it is set up: its address is stable, so
+  # a card that is already printed keeps working. It runs in the background and
+  # resumes by itself after a reboot, so there is no process to watch.
+  URL=""
+  if command -v tailscale >/dev/null 2>&1; then
+    URL="$(tailscale funnel status 2>/dev/null | grep -ohE 'https://[A-Za-z0-9.-]+\.ts\.net' | head -1 || true)"
+    if [ -z "$URL" ] && [ "$(cat "$FUNNEL_FILE" 2>/dev/null || true)" = "enabled" ]; then
+      log "funnel is configured but not serving, starting it"
+      "$ROOT/funnel.sh" >>"$STATE_DIR/funnel.log" 2>&1 || true
+      URL="$(tailscale funnel status 2>/dev/null | grep -ohE 'https://[A-Za-z0-9.-]+\.ts\.net' | head -1 || true)"
+    fi
   fi
 
-  # 3. the current public address
-  URL="$(grep -ohE 'https://[a-z0-9.-]+\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | tail -1 || true)"
+  # Otherwise fall back to a cloudflared quick tunnel, whose address changes
+  # every time it restarts.
+  if [ -z "$URL" ]; then
+    if ! pgrep -f "cloudflared .*tunnel" >/dev/null 2>&1; then
+      log "tunnel is not running, starting it"
+      nohup "$ROOT/tunnel.sh" >>"$TUNNEL_LOG" 2>&1 &
+      sleep 15
+    fi
+    URL="$(grep -ohE 'https://[a-z0-9.-]+\.trycloudflare\.com' "$TUNNEL_LOG" 2>/dev/null | tail -1 || true)"
+  fi
+
+  # 3. record it
   if [ -n "$URL" ]; then
     if [ "$(cat "$URL_FILE" 2>/dev/null || true)" != "$URL" ]; then
       echo "$URL" > "$URL_FILE"

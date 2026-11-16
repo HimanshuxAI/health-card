@@ -207,30 +207,61 @@ gateway configuration to the host, pulls the images for that commit and starts t
 If the secrets are not set the workflow reports that it has nothing to do and exits, so the
 repository stays usable without a host.
 
-### Permanent public address
+### A permanent public address, for free
 
-The stack listens on port 80. To give it a fixed name on the internet, put a named Cloudflare
-tunnel in front of it, or publish the port directly.
+The stack listens on port 80. Publishing that port on a stable address needs something in front
+of it. There are three ways, in order of cost.
 
-A named tunnel keeps the same address across restarts:
+#### Tailscale Funnel — free, stable address
+
+[Funnel][funnel] publishes a local port at `https://<machine>.<tailnet>.ts.net`. It is free on
+Tailscale's Personal plan, the name does not change when the machine restarts, and with `--bg` it
+resumes by itself after a reboot. It is the cheapest way to get a fixed address.
+
+One-time setup, in the browser:
+
+1. Install [Tailscale for macOS][tsmac]. Use the App Store build or the Standalone variant; the
+   sandboxed variants can forward a port, which is all this needs.
+2. Sign in. This creates a free Personal tailnet.
+3. Publish the gateway:
+
+```bash
+bash scripts/funnel.sh
+```
+
+Tailscale shows a page to approve Funnel and enables MagicDNS and HTTPS certificates for the
+tailnet as part of it. The script writes the address to
+`~/.local/state/health-card/public-url.txt` and leaves a marker so the watchdog keeps Funnel
+running rather than falling back to a quick tunnel. Check it any time with:
+
+```bash
+tailscale funnel status
+```
+
+A Funnel address survives a reboot, so a QR code on a printed card keeps pointing at the running
+scanner.
+
+#### Cloudflare named tunnel — needs a domain
+
+A named tunnel also keeps its address, but it can only use a hostname on a domain you own and have
+added to Cloudflare. There is no way to get a stable name on `trycloudflare.com`.
 
 ```bash
 cloudflared tunnel login
 cloudflared tunnel create abha
 cloudflared tunnel route dns abha health.example.com
-cat > ~/.cloudflared/config.yml <<'YAML'
-tunnel: <TUNNEL-ID>
-credentials-file: /Users/<YOU>/.cloudflared/<TUNNEL-ID>.json
-ingress:
-  - hostname: health.example.com
-    service: http://localhost:80
-  - service: http_status:404
-YAML
 ```
 
-`scripts/tunnel.sh` starts that tunnel when `~/.cloudflared/config.yml` exists, and a quick
-tunnel otherwise. A quick tunnel needs no account, but Cloudflare hands out a random address that
-changes on every restart.
+`scripts/tunnel.sh` uses that tunnel when `~/.cloudflared/config.yml` exists.
+
+#### Cloudflare quick tunnel — no account, changing address
+
+With nothing else configured, `scripts/tunnel.sh` opens a quick tunnel. It needs no account, but
+Cloudflare hands out a random address that changes on every restart, so it is only suitable for a
+temporary look.
+
+[funnel]: https://tailscale.com/kb/1223/funnel
+[tsmac]: https://tailscale.com/download/mac
 
 ### Keeping a deployment up on a Mac
 
@@ -238,7 +269,7 @@ changes on every restart.
 
 | Agent | What it does |
 |---|---|
-| `com.abha.healthcard.keepalive` | Checks every service of the stack and starts the ones that stopped, restarts the tunnel when its process dies, and writes the current public address to `~/.local/state/health-card/public-url.txt` |
+| `com.abha.healthcard.keepalive` | Checks every service of the stack and starts the ones that stopped, keeps the public address running — Tailscale Funnel when it is configured, a quick tunnel otherwise — and writes that address to `~/.local/state/health-card/public-url.txt` |
 | `com.abha.healthcard.caffeinate` | Stops the Mac from sleeping while it serves the app |
 
 ```bash
