@@ -1,0 +1,70 @@
+{
+  "captured_at": "2026-11-16T04:50:57Z",
+  "environment": {
+    "platform": "macOS-26.7.2-arm64-arm-64bit-Mach-O",
+    "python": "3.13.12",
+    "machine": "arm64",
+    "cpu_count": 10,
+    "protocol_note": "Local in-process benchmark; excludes QR capture, TLS, network transit, and browser rendering."
+  },
+  "unit_and_integration_tests": {
+    "command": ".venv/bin/python -m pytest services/identity/tests services/records/tests services/abdm/tests services/nhcx/tests services/sos/tests -q",
+    "result": "PASS",
+    "test_count": 19,
+    "passed": 19,
+    "failed": 0,
+    "distribution": {
+      "abdm": 3,
+      "identity": 3,
+      "nhcx": 3,
+      "records_crypto": 4,
+      "records_emergency": 3,
+      "sos": 3
+    }
+  },
+  "live_end_to_end_workflow": {
+    "script": "scripts/e2e.py",
+    "result": "PASS",
+    "steps": 16,
+    "passed": 16,
+    "failed": 0,
+    "coverage": [
+      "health/identity",
+      "health/records",
+      "health/abdm",
+      "health/nhcx",
+      "health/sos",
+      "login patient",
+      "login hospital",
+      "hospital lists patient records (consent ok)",
+      "emergency resolve <800ms",
+      "hospital creates record",
+      "FHIR conversion + care context",
+      "bill created",
+      "claim submitted to NHCX",
+      "claim adjudicated",
+      "SOS alert dispatched",
+      "ABDM integration trace"
+    ]
+  },
+  "emergency_qr_token_resolution_benchmark": {
+    "warmup_requests": 50,
+    "measured_requests": 1000,
+    "http_status": "all 200",
+    "wall_time_ms": {
+      "min": 0.612,
+      "p50": 0.644,
+      "mean": 0.661,
+      "p95": 0.743,
+      "max": 1.908
+    },
+    "service_reported_resolution_ms": {
+      "min": 0,
+      "p50": 0,
+      "mean": 0.001,
+      "p95": 0,
+      "max": 1
+    },
+    "interpretation": "The integer service timer rounds sub-millisecond resolution to zero; wall-time statistics provide finer local resolution. No production-network or field-performance claim is made."
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "manuscript_shingles": 5991,
+  "max_overlap_percent_of_manuscript": 0.02,
+  "ngram_size": 7,
+  "passed": true,
+  "sources": {
+    "ijirt_template": {
+      "examples": [],
+      "overlap_count": 0,
+      "overlap_percent_of_manuscript": 0.0,
+      "source_shingles": 1490
+    },
+    "project_synopsis": {
+      "examples": [
+        "blood group severe drug allergies chronic conditions"
+      ],
+      "overlap_count": 1,
+      "overlap_percent_of_manuscript": 0.02,
+      "source_shingles": 869
+    }
+  }
+}
