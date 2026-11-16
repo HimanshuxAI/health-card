@@ -9,6 +9,7 @@ from deck.slides.narrative import (
     build_problem,
     build_solution,
 )
+from deck.slides.system import build_architecture, build_experience, build_security
 from deck.theme import new_presentation
 
 
@@ -29,11 +30,19 @@ def _validate_scan_token(scan_token: str | None) -> str | None:
 
 
 def build_presentation(
-    output: Path, *, scan_token: str | None = None
+    output: Path,
+    *,
+    scan_token: str | None = None,
+    assets_dir: Path | None = None,
 ) -> Path:
-    """Build and save the currently implemented narrative slides."""
+    """Build and save the currently implemented presentation slides."""
     output = Path(output)
     resolved_token = _validate_scan_token(scan_token)
+    resolved_assets_dir = (
+        Path(assets_dir)
+        if assets_dir is not None
+        else Path(__file__).resolve().parent / "assets" / "screenshots"
+    )
     qr_url = (
         f"{QR_URL}?t={resolved_token}"
         if resolved_token is not None
@@ -59,6 +68,9 @@ def build_presentation(
             qr_url=qr_url,
             scan_token=resolved_token,
         )
+        build_experience(prs, assets_dir=resolved_assets_dir)
+        build_architecture(prs)
+        build_security(prs)
 
         output.parent.mkdir(parents=True, exist_ok=True)
         prs.save(output)

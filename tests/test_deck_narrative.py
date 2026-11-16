@@ -139,9 +139,11 @@ def test_builds_three_native_narrative_slides_with_exact_copy(tmp_path: Path) ->
     assert output.stat().st_size > 0
 
     prs = Presentation(output)
-    assert len(prs.slides) == 3
+    assert len(prs.slides) == 6
 
-    for slide, copy, title in zip(prs.slides, SLIDES[:3], APPROVED_TITLES, strict=True):
+    for slide, copy, title in zip(
+        list(prs.slides)[:3], SLIDES[:3], APPROVED_TITLES, strict=True
+    ):
         assert title in _texts(slide)
         assert slide.notes_slide.notes_text_frame.text == copy.notes.strip()
 
@@ -192,7 +194,7 @@ def test_narrative_slides_use_only_native_qr_images_and_one_card_corner(
     build_presentation(output)
     prs = Presentation(output)
 
-    for index, slide in enumerate(prs.slides, start=1):
+    for index, slide in enumerate(list(prs.slides)[:3], start=1):
         pictures = sum(
             shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in slide.shapes
         )
@@ -202,7 +204,7 @@ def test_narrative_slides_use_only_native_qr_images_and_one_card_corner(
 
     rounded_rectangles = [
         len(slide._element.xpath('.//p:spPr/a:prstGeom[@prst="roundRect"]'))
-        for slide in prs.slides
+        for slide in list(prs.slides)[:3]
     ]
     assert rounded_rectangles == [1, 0, 0]
 
