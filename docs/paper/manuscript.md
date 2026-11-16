@@ -94,7 +94,7 @@ Table I maps the design goals to implemented artifacts and the evaluation eviden
 
 **Table I. Requirements-to-implementation-to-evidence traceability.**
 
-| Requirement | Implemented mechanism | Evidence |
+| Requirement | Impl. mechanism | Evidence |
 |---|---|---|
 | ABHA-linked role-based frontend | Patient, hospital, admin, and scanner areas; JWT claims | 3 identity tests and end-to-end logins |
 | Minimum emergency disclosure | Encrypted trauma profile with five selected fields | Emergency-resolution workflow and profile assertions |
@@ -114,7 +114,7 @@ Table II summarizes responsibilities and principal data. Each database owns exac
 
 **Table II. Service responsibilities and data ownership.**
 
-| Service | Principal responsibilities | Owned data |
+| Service | Responsibilities | Owned data |
 |---|---|---|
 | Identity | Registration, login, RBAC, simulated eKYC, consents | Users, password hashes, ABHA identifiers, consent artifacts |
 | Records | Trauma profiles, AES-GCM sealing, QR tokens, health records | Patient profiles, sealed profiles, QR tokens, health records |
@@ -136,7 +136,7 @@ Table III lists principal controls and validation.
 
 **Table III. Security controls and validation.**
 
-| Control | Purpose | Validation result |
+| Control | Purpose | Validation |
 |---|---|---|
 | bcrypt password hashing | Prevent password retrieval from identity database | Identity service tests passed |
 | JWT and role claims | Authenticate and constrain API access | Identity and cross-service tests passed |
@@ -186,7 +186,7 @@ A benchmark of 1,000 measured requests was executed after 50 warmup requests aga
 
 A simple decomposition of the measured retrieval path is:
 
-T_local = T_route + T_token + T_HMAC + T_AES + T_serialize   (1)
+T_local = T_route + T_tok + T_HMAC + T_AES + T_ser   (1)
 
 where `T_route` includes routing to the resolver, `T_token` includes token lookup and active-state checking, `T_HMAC` includes signature verification, `T_AES` includes authenticated decryption, and `T_serialize` includes response serialization. The measured quantity is local and excludes QR acquisition, TLS, networking, browser rendering, and user interpretation.
 
@@ -204,7 +204,7 @@ Table IV summarizes the principal measured and observed outcomes.
 
 **Table IV. Measured evaluation results.**
 
-| Evaluation item | Quantity/outcome | Context |
+| Evaluation item | Outcome | Context |
 |---|---|---|
 | Service unit/integration tests | 19/19 passed | Identity, records, ABDM/FHIR, NHCX, SOS |
 | End-to-end workflow | 16/16 steps passed | Five live local services on ports 8001-8005 |
@@ -235,7 +235,7 @@ Table V contrasts the prototype with representative related approaches. The comp
 
 **Table V. Comparison with representative related approaches.**
 
-| Aspect | Related QR/mobile approaches | Proposed prototype |
+| Aspect | Related approaches | Proposed prototype |
 |---|---|---|
 | Emergency entry | QR identification or mobile records [13]-[15] | Rotating token linked to encrypted minimum profile |
 | Data exposure | Often identity or selected mobile record fields | Five emergency fields decrypted only after integrity check |
@@ -277,7 +277,7 @@ This paper presented an implemented ABHA-linked emergency health-card prototype 
 
 **Table VI. Endpoint map.**
 
-| Area | Representative endpoint | Purpose |
+| Area | Endpoint | Purpose |
 |---|---|---|
 | Identity | `POST /login` | Obtain bearer JWT and role |
 | Identity | `GET /patients` | List consent-visible patients |

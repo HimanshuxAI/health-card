@@ -229,30 +229,36 @@ def _add_table(doc, caption: str, rows: list[list[str]], col_widths: list[float]
 
     if col_widths:
         # Override the table grid columns (w:tblGrid/w:gridCol) to the exact widths
-        # This is what Word actually uses for column layout when cells don't have tcW
         tbl = table._tbl
         grid = tbl.find(qn("w:tblGrid"))
         if grid is not None:
-            # Remove existing gridCol elements
             for gc in list(grid.findall(qn("w:gridCol"))):
                 grid.remove(gc)
-            # Add new ones with our widths in twips (1 inch = 1440 twips)
             for w_in in col_widths:
                 gc = OxmlElement("w:gridCol")
                 gc.set(qn("w:w"), str(int(w_in * 1440)))
                 grid.append(gc)
-        # Also set tcW on header row cells to be safe
+        # Also set tcW on all cells to prevent wrapping issues
         twips_per_inch = 1440
-        for i, w_in in enumerate(col_widths):
-            if i < len(table.rows[0].cells):
-                cell = table.rows[0].cells[i]
+        for row in table.rows:
+            for i, w_in in enumerate(col_widths):
+                if i < len(row.cells):
+                    cell = row.cells[i]
+                    tc_pr = cell._tc.get_or_add_tcPr()
+                    tcW = tc_pr.find(qn("w:tcW"))
+                    if tcW is None:
+                        tcW = OxmlElement("w:tcW")
+                        tc_pr.append(tcW)
+                    tcW.set(qn("w:w"), str(int(w_in * twips_per_inch)))
+                    tcW.set(qn("w:type"), "dxa")
+        # Disable text wrapping in cells
+        for row in table.rows:
+            for cell in row.cells:
                 tc_pr = cell._tc.get_or_add_tcPr()
-                tcW = tc_pr.find(qn("w:tcW"))
-                if tcW is None:
-                    tcW = OxmlElement("w:tcW")
-                    tc_pr.append(tcW)
-                tcW.set(qn("w:w"), str(int(w_in * twips_per_inch)))
-                tcW.set(qn("w:type"), "dxa")
+                no_wrap = tc_pr.find(qn("w:noWrap"))
+                if no_wrap is None:
+                    no_wrap = OxmlElement("w:noWrap")
+                    tc_pr.append(no_wrap)
 
     for row_idx, row in enumerate(rows):
         for col_idx, value in enumerate(row):
@@ -266,8 +272,8 @@ def _add_table(doc, caption: str, rows: list[list[str]], col_widths: list[float]
             _add_inline(paragraph, value, size=8, bold=(row_idx == 0))
             if row_idx == 0:
                 _set_cell_shading(cell, "E8E8E8")
-        if row_idx == 0:
-            _set_row_cant_split(table.rows[0])
+        # Prevent row splitting across pages
+        _set_row_cant_split(table.rows[row_idx])
 
     # Small gap after table
     gap = doc.add_paragraph()
@@ -290,26 +296,39 @@ def _add_image_inline(doc, caption: str, image_path: Path) -> None:
 
 
 def _add_equation(doc, equation: str) -> None:
-    """Equation rendered as a 2-column layout table (per IJIRT LaTeX)."""
-    table = doc.add_table(rows=1, cols=2)
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.autofit = False
-    table.columns[0].width = Inches(2.6)
-    table.columns[1].width = Inches(0.45)
-    left, right = table.rows[0].cells
-    left.width = Inches(2.6)
-    right.width = Inches(0.45)
-    p = left.paragraphs[0]
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p.paragraph_format.space_after = Pt(2)
+    """Equation rendered as a single paragraph with centered equation and right-aligned number."""
     match = re.match(r"^(.*?)(\(\d+\))$", equation.strip())
     eq_text = match.group(1).strip() if match else equation
     number = match.group(2) if match else ""
-    _add_inline(p, eq_text, size=9, italic=True)
-    rp = right.paragraphs[0]
-    rp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    rp.paragraph_format.space_after = Pt(2)
-    _add_inline(rp, number, size=9)
+    # Abbreviate for column width
+    eq_text = eq_text.replace("T_route", "T_route").replace("T_token", "T_tok").replace("T_HMAC", "T_HMAC").replace("T_AES", "T_AES").replace("T_serialize", "T_ser")
+    
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    pf = para.paragraph_format
+    pf.space_before = Pt(4)
+    pf.space_after = Pt(4)
+    pf.line_spacing = 1.0
+    # Add a right tab stop at 3.0in for the equation number
+    tab_stops = para.paragraph_format.tab_stops
+    tab_stops.add_tab_stop(Inches(3.0), alignment=WD_ALIGN_PARAGRAPH.RIGHT)
+    
+    # Equation text
+    run = para.add_run(eq_text)
+    run.font.name = "Times New Roman"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+    run.font.size = Pt(8)
+    run.italic = True
+    
+    if number:
+        # Tab to the right position for equation number
+        run_tab = para.add_run("\t")
+        run_tab.font.name = "Times New Roman"
+        run_tab.font.size = Pt(8)
+        run_num = para.add_run(number)
+        run_num.font.name = "Times New Roman"
+        run_num._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+        run_num.font.size = Pt(8)
 
 
 def _parse_frontmatter(md: str) -> tuple[dict[str, str], str]:
@@ -338,6 +357,8 @@ def _blocks(md: str):
     blocks: list[tuple[str, object]] = []
     paragraph: list[str] = []
     table: list[str] = []
+    in_references = False
+    ref_buffer: list[str] = []
 
     def flush_paragraph():
         if paragraph:
@@ -349,8 +370,32 @@ def _blocks(md: str):
             blocks.append(("table", _parse_rows("\n".join(table))))
             table.clear()
 
+    def flush_references():
+        nonlocal ref_buffer
+        if ref_buffer:
+            blocks.append(("references", ref_buffer.copy()))
+            ref_buffer.clear()
+
     for line in lines:
         stripped = line.strip()
+        if stripped.startswith("## REFERENCES"):
+            flush_paragraph()
+            flush_table()
+            in_references = True
+            blocks.append(("heading2", "REFERENCES"))
+            continue
+        if in_references:
+            if stripped.startswith("## "):
+                flush_references()
+                in_references = False
+                blocks.append(("heading2", stripped[3:].strip()))
+                continue
+            if stripped.startswith("["):
+                ref_buffer.append(stripped)
+                continue
+            if stripped and not stripped.startswith("["):
+                flush_references()
+                in_references = False
         if stripped.startswith("|"):
             flush_paragraph()
             table.append(stripped)
@@ -382,6 +427,7 @@ def _blocks(md: str):
             paragraph.append(stripped)
     flush_paragraph()
     flush_table()
+    flush_references()
     return blocks
 
 
@@ -423,12 +469,12 @@ def build() -> None:
 
     # Column widths for the six tables (sum = 3.0 in), keyed by Roman numeral
     TABLE_WIDTHS = {
-        "I": [0.65, 1.15, 1.20],
-        "II": [0.75, 1.25, 1.00],
-        "III": [1.00, 1.10, 0.90],
-        "IV": [1.30, 1.00, 0.70],
-        "V": [1.00, 1.00, 1.00],
-        "VI": [0.70, 1.30, 1.00],
+        "I": [0.60, 1.20, 1.20],      # Requirement, Implemented mechanism, Evidence
+        "II": [0.75, 1.25, 1.00],     # Service, Principal responsibilities, Owned data
+        "III": [1.00, 1.10, 0.90],    # Control, Purpose, Validation result
+        "IV": [1.25, 1.05, 0.70],     # Evaluation item, Quantity/outcome, Context
+        "V": [1.00, 1.00, 1.00],      # Aspect, Related QR/mobile approaches, Proposed prototype
+        "VI": [0.65, 1.35, 1.00],     # Area, Representative endpoint, Purpose
     }
 
     table_counter = 0
@@ -457,6 +503,18 @@ def build() -> None:
             _add_image_inline(doc, caption, image_path)
         elif kind == "equation":
             _add_equation(doc, payload)
+        elif kind == "references":
+            # IJIRT style: 9pt, hanging indent 0.25in, no extra space between entries
+            for ref in payload:
+                para = doc.add_paragraph()
+                para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                pf = para.paragraph_format
+                pf.space_before = Pt(0)
+                pf.space_after = Pt(0)
+                pf.line_spacing = 1.0
+                pf.first_line_indent = Inches(-0.25)
+                pf.left_indent = Inches(0.25)
+                _add_inline(para, ref, size=9)
 
     doc.save(str(OUTPUT))
     print(f"Built {OUTPUT}")
