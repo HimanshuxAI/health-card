@@ -1,6 +1,13 @@
-"""Generate grayscale IJIRT figures for the ABHA health-card manuscript."""
+"""Generate column-width IJIRT figures for the ABHA health-card manuscript.
+
+Every figure is drawn on a 900 px canvas that is placed at 3.0 in in the
+DOCX, i.e. exactly one 3.0 in column of the IJIRT two-column layout.
+At 300 dpi the conversion is ``pt = px * 0.24``, so 32 px == 7.7 pt and
+36 px == 8.6 pt. Nothing below 30 px (7.2 pt) is used for body text.
+"""
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
@@ -8,177 +15,294 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parents[2]
 FIGURES = ROOT / "docs" / "paper" / "figures"
 
-INK = "#1c1917"
-LIGHT = "#f5f2ea"
-PAPER = "#ffffff"
-MID = "#d6d3d1"
-DARK = "#a8a29e"
-ACCENT = "#57534e"
+CANVAS_W = 900
+MARGIN = 22
+BOX_W = CANVAS_W - 2 * MARGIN
+
+INK = "#111111"
+RULE = "#111111"
+FILL = "#f2f2f2"
+FILL_SOFT = "#fafafa"
+FILL_ACCENT = "#e4e4e4"
+WHITE = "#ffffff"
+
+FONT_REGULAR = "/System/Library/Fonts/Supplemental/Arial.ttf"
+FONT_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+
+PX_TITLE = 36  # 8.6 pt
+PX_LABEL = 32  # 7.7 pt
+PX_BODY = 30  # 7.2 pt
+PX_SMALL = 28  # 6.7 pt (annotations only)
 
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    font_path = "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf"
-    return ImageFont.truetype(font_path, size)
+    return ImageFont.truetype(FONT_BOLD if bold else FONT_REGULAR, size)
 
 
-def _rounded(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], fill: str, outline: str = INK, radius: int = 14, width: int = 3) -> None:
-    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
+def _width(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont) -> float:
+    return draw.textlength(text, font=font)
 
 
-def _text_center(draw: ImageDraw.ImageDraw, xy: tuple[int, int], text: str, size: int, fill: str = INK, bold: bool = False) -> None:
-    font = _font(size, bold)
-    draw.text(xy, text, font=font, fill=fill, anchor="mm")
+def _wrap(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.FreeTypeFont, max_width: int) -> list[str]:
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if current and _width(draw, candidate, font) > max_width:
+            lines.append(current)
+            current = word
+        else:
+            current = candidate
+    if current:
+        lines.append(current)
+    return lines
 
 
-def _arrow(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int, int], width: int = 5, fill: str = INK, head: int = 18) -> None:
-    draw.line([start, end], fill=fill, width=width)
-    x1, y1 = start
-    x2, y2 = end
-    angle = ((x2 - x1) ** 2 + (y2 - y1) ** 2) ** 0.5
-    if angle == 0:
-        return
-    ux, uy = (x2 - x1) / angle, (y2 - y1) / angle
-    left = (x2 - head * ux + head * 0.55 * uy, y2 - head * uy - head * 0.55 * ux)
-    right = (x2 - head * ux - head * 0.55 * uy, y2 - head * uy + head * 0.55 * ux)
-    draw.polygon([(x2, y2), left, right], fill=fill)
+def _box(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    w: int,
+    h: int,
+    *,
+    title: str,
+    detail: str | None = None,
+    fill: str = FILL,
+    dashed: bool = False,
+    badge: str | None = None,
+) -> None:
+    """Draw one rounded-free rectangular node."""
+    if dashed:
+        _dashed_rect(draw, x, y, x + w, y + h)
+    else:
+        draw.rectangle((x, y, x + w, y + h), fill=fill, outline=RULE, width=3)
+
+    pad = 16
+    inner_w = w - 2 * pad
+    title_font = _font(PX_TITLE, bold=True)
+    detail_font = _font(PX_BODY)
+    badge_font = _font(PX_SMALL, bold=True)
+
+    badge_w = 0
+    if badge:
+        badge_w = int(_width(draw, badge, badge_font)) + 22
+        bx = x + w - pad - badge_w
+        draw.rectangle((bx, y + 14, bx + badge_w, y + 14 + 38), fill=WHITE, outline=RULE, width=2)
+        draw.text((bx + badge_w / 2, y + 33), badge, font=badge_font, fill=INK, anchor="mm")
+
+    title_lines = _wrap(draw, title, title_font, inner_w - badge_w)
+    title_y = y + 14
+    for line in title_lines:
+        draw.text((x + pad, title_y), line, font=title_font, fill=INK)
+        title_y += int(PX_TITLE * 1.18)
+
+    if detail:
+        detail_y = title_y + 4
+        for line in _wrap(draw, detail, detail_font, inner_w):
+            draw.text((x + pad, detail_y), line, font=detail_font, fill=INK)
+            detail_y += int(PX_BODY * 1.22)
+
+
+def _dashed_rect(draw: ImageDraw.ImageDraw, x0: int, y0: int, x1: int, y1: int, dash: int = 14, gap: int = 9) -> None:
+    for x in range(x0, x1, dash + gap):
+        draw.line((x, y0, min(x + dash, x1), y0), fill=RULE, width=3)
+        draw.line((x, y1, min(x + dash, x1), y1), fill=RULE, width=3)
+    for y in range(y0, y1, dash + gap):
+        draw.line((x0, y, x0, min(y + dash, y1)), fill=RULE, width=3)
+        draw.line((x1, y, x1, min(y + dash, y1)), fill=RULE, width=3)
+
+
+def _arrow_down(draw: ImageDraw.ImageDraw, x: int, y0: int, y1: int, label: str | None = None) -> None:
+    draw.line((x, y0, x, y1 - 12), fill=RULE, width=3)
+    draw.polygon([(x, y1), (x - 10, y1 - 16), (x + 10, y1 - 16)], fill=RULE)
+    if label:
+        font = _font(PX_SMALL)
+        draw.text((x + 14, (y0 + y1) / 2), label, font=font, fill=INK, anchor="lm")
+
+
+def _arrow_right(draw: ImageDraw.ImageDraw, x0: int, x1: int, y: int) -> None:
+    draw.line((x0, y, x1 - 12, y), fill=RULE, width=3)
+    draw.polygon([(x1, y), (x1 - 16, y - 10), (x1 - 16, y + 10)], fill=RULE)
+
+
+def _chip(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int, text: str, *, fill: str = FILL) -> None:
+    draw.rectangle((x, y, x + w, y + h), fill=fill, outline=RULE, width=3)
+    font = _font(PX_BODY, bold=True)
+    draw.text((x + w / 2, y + h / 2), text, font=font, fill=INK, anchor="mm")
+
+
+def _note(draw: ImageDraw.ImageDraw, y: int, text: str) -> None:
+    font = _font(PX_SMALL)
+    draw.text((CANVAS_W / 2, y), text, font=font, fill=INK, anchor="ma")
+
+
+def _save(image: Image.Image, path: Path) -> None:
+    image.save(path, "PNG", dpi=(300, 300), optimize=True)
 
 
 def generate_architecture(path: Path) -> None:
-    width, height = 2400, 1360
-    image = Image.new("RGB", (width, height), PAPER)
+    height = 900
+    image = Image.new("RGB", (CANVAS_W, height), WHITE)
     draw = ImageDraw.Draw(image)
-    _text_center(draw, (width // 2, 100), "Next.js Role-Based Frontend: Patient, Hospital, Admin, Public Scanner", 36, bold=True)
-    _rounded(draw, (270, 170, 2130, 270), LIGHT)
-    _text_center(draw, (width // 2, 220), "HTTPS API Calls  /api/identity, /api/records, /api/abdm, /api/nhcx, /api/sos", 26)
 
-    _rounded(draw, (1050, 350, 1350, 460), MID)
-    _text_center(draw, (width // 2, 405), "NGINX Gateway", 30, bold=True)
-    _text_center(draw, (width // 2, 520), "Routing, rate limiting, service isolation", 24)
+    y = MARGIN
+    _box(draw, MARGIN, y, BOX_W, 84, title="Next.js role-based frontends", detail="Patient · Hospital · Admin · Public scanner", fill=FILL_ACCENT)
+    y += 84
+    _arrow_down(draw, CANVAS_W // 2, y + 6, y + 44, label="HTTPS / JSON")
+    y += 50
 
-    service_boxes = [
-        ("Identity & Auth", "JWT, bcrypt, RBAC, eKYC, consent", "identity.db", 270),
-        ("Records & Encryption", "AES-128-GCM, HMAC, QR, records", "records.db", 690),
-        ("ABDM & FHIR Engine", "FHIR bundles, care contexts, trace", "abdm.db", 1110),
-        ("NHCX Claims Hub", "Bills, FHIR Claim, adjudication", "nhcx.db", 1530),
-        ("SOS & Notification", "WebSocket alerts, GPS, SMTP", "sos.db", 1950),
+    _box(draw, MARGIN, y, BOX_W, 78, title="NGINX API gateway", detail="Routing · rate limiting · service isolation", fill=FILL)
+    y += 78
+    _arrow_down(draw, CANVAS_W // 2, y + 6, y + 42)
+    y += 48
+
+    services = [
+        ("Identity & auth", "JWT, bcrypt, RBAC, consents, simulated eKYC", "identity.db"),
+        ("Records & crypto", "AES-128-GCM sealing, HMAC, QR tokens, records", "records.db"),
+        ("ABDM / FHIR engine", "FHIR bundles, care contexts, integration trace", "abdm.db"),
+        ("NHCX claims hub", "Bills, FHIR Claim conversion, adjudication", "nhcx.db"),
+        ("SOS & notification", "WebSocket broadcast, GPS tags, SMTP fallback", "sos.db"),
     ]
-    _arrow(draw, (1200, 460), (1200, 540), width=6)
-    for title, sub, db, left in service_boxes:
-        top, bottom = 650, 810
-        _rounded(draw, (left, top, left + 180, bottom), LIGHT)
-        _text_center(draw, (left + 90, top + 48), title, 24, bold=True)
-        _text_center(draw, (left + 90, top + 104), sub, 15)
-        _arrow(draw, (1200, 550), (left + 90, top - 10), width=4)
-        _rounded(draw, (left + 20, 880, left + 160, 940), MID)
-        _text_center(draw, (left + 90, 910), db, 22)
-        _arrow(draw, (left + 90, 810), (left + 90, 875), width=4)
+    row_h = 74
+    for title, detail, db in services:
+        _box(draw, MARGIN, y, BOX_W, row_h, title=title, detail=detail, fill=FILL_SOFT, badge=db)
+        y += row_h + 8
+    y -= 8
 
-    _text_center(draw, (width // 2, 1090), "Simulation Boundaries", 30, bold=True)
-    _rounded(draw, (270, 1130, 1080, 1250), MID)
-    _text_center(draw, (675, 1170), "Locally simulated ABDM gateway", 25, bold=True)
-    _text_center(draw, (675, 1215), "FHIR conversion, care context, trace log", 20)
-    _rounded(draw, (1320, 1130, 2130, 1250), MID)
-    _text_center(draw, (1725, 1170), "Locally simulated NHCX gateway", 25, bold=True)
-    _text_center(draw, (1725, 1215), "Claim, adjudication, state transition", 20)
-    image.save(path, "PNG", dpi=(300, 300), optimize=True)
+    _arrow_down(draw, CANVAS_W // 2, y + 6, y + 40)
+    y += 46
+
+    band_h = 176
+    _dashed_rect(draw, MARGIN, y, CANVAS_W - MARGIN, y + band_h)
+    band_label = _font(PX_SMALL, bold=True)
+    label_w = int(_width(draw, "LOCAL SIMULATION BOUNDARY", band_label)) + 24
+    draw.rectangle((MARGIN + 14, y - 15, MARGIN + 14 + label_w, y + 15), fill=WHITE)
+    draw.text((MARGIN + 26, y), "LOCAL SIMULATION BOUNDARY", font=band_label, fill=INK, anchor="lm")
+
+    inner_x = MARGIN + 18
+    inner_w = (BOX_W - 36 - 18) // 2
+    inner_top = y + 26
+    _box(draw, inner_x, inner_top, inner_w, 126, title="Simulated ABDM gateway", detail="FHIR conversion, care contexts, trace log", fill=FILL)
+    _box(draw, inner_x + inner_w + 18, inner_top, inner_w, 126, title="Simulated NHCX gateway", detail="Claim build, adjudication, transitions", fill=FILL)
+    y += band_h + 10
+
+    _note(draw, y, "Five FastAPI services, each owning one SQLite database; no live national-gateway connectivity.")
+    y += 34
+
+    image = image.crop((0, 0, CANVAS_W, y + 8))
+    _save(image, path)
 
 
 def generate_emergency_flow(path: Path) -> None:
-    width, height = 2400, 1180
-    image = Image.new("RGB", (width, height), PAPER)
+    image = Image.new("RGB", (CANVAS_W, 1000), WHITE)
     draw = ImageDraw.Draw(image)
+
+    y = MARGIN
     steps = [
-        ("Patient Card", "Rotating QR token", 180),
-        ("Responder Scan", "Token or QR link", 630),
-        ("Token Lookup", "Active token check", 1080),
-        ("Integrity Check", "HMAC-SHA256", 1530),
-        ("AES-128-GCM", "Decrypt profile", 1980),
+        ("1  Patient health card", "Rotating 32-byte QR token"),
+        ("2  Responder scan", "QR link or manual token entry"),
+        ("3  Token lookup", "Active-state check"),
+        ("4  Integrity check", "HMAC-SHA256 signature verified"),
+        ("5  Decrypt", "AES-128-GCM sealed profile opened"),
     ]
-    for title, sub, left in steps:
-        _rounded(draw, (left, 180, left + 240, 320), LIGHT)
-        _text_center(draw, (left + 120, 225), title, 25, bold=True)
-        _text_center(draw, (left + 120, 280), sub, 20)
-    for i in range(len(steps) - 1):
-        _arrow(draw, (steps[i][2] + 240, 250), (steps[i + 1][2] - 10, 250), width=5)
+    step_h = 70
+    for title, detail in steps:
+        _box(draw, MARGIN, y, BOX_W, step_h, title=title, detail=detail, fill=FILL)
+        y += step_h
+        if title != steps[-1][0]:
+            _arrow_down(draw, CANVAS_W // 2, y + 4, y + 34)
+            y += 38
 
-    profile_fields = ["Blood group", "Drug allergies", "Chronic conditions", "Medications", "Emergency contacts"]
-    _rounded(draw, (180, 480, 1080, 810), MID)
-    _text_center(draw, (630, 530), "Displayed Trauma Profile", 28, bold=True)
-    for i, field in enumerate(profile_fields):
-        draw.text((240, 585 + i * 45), field, font=_font(23), fill=INK)
+    y += 6
+    _box(
+        draw,
+        MARGIN,
+        y,
+        BOX_W,
+        118,
+        title="Displayed trauma profile",
+        detail="Blood group · Drug allergies · Chronic conditions · Medications · Emergency contacts",
+        fill=FILL_ACCENT,
+    )
+    y += 118
 
-    _rounded(draw, (1320, 480, 2220, 810), MID)
-    _text_center(draw, (1770, 530), "Optional Emergency Response", 28, bold=True)
-    _text_center(draw, (1770, 590), "GPS-tagged SOS alert", 24)
-    _arrow(draw, (1080, 620), (1315, 620), width=6)
-    _rounded(draw, (1420, 630, 1970, 720), LIGHT)
-    _text_center(draw, (1695, 675), "WebSocket broadcast to hospital dashboard", 23)
-    _arrow(draw, (1695, 720), (1695, 745), width=4)
-    _rounded(draw, (1420, 750, 1970, 840), LIGHT)
-    _text_center(draw, (1695, 795), "SMTP email to registered contacts", 23)
+    y += 34
+    _box(
+        draw,
+        MARGIN,
+        y,
+        BOX_W,
+        92,
+        title="Optional SOS dispatch",
+        detail="WebSocket to hospital dashboard · SMTP to registered contacts",
+        fill=WHITE,
+        dashed=True,
+    )
+    y += 92
 
-    _text_center(draw, (width // 2, 940), "Control points", 28, bold=True)
+    y += 32
     controls = [
-        "No login for emergency profile resolution",
-        "HMAC verification precedes ciphertext handling",
-        "Token replacement invalidates prior QR links",
-        "Disclosed profile limited to emergency fields",
+        "No login required for emergency resolution",
+        "Integrity verified before ciphertext is opened",
+        "Rotating token invalidates the previous QR link",
+        "Only the five emergency fields are disclosed",
     ]
-    for i, control in enumerate(controls):
-        col = i % 2
-        row = i // 2
-        x = 330 if col == 0 else 1330
-        y = 995 + row * 55
-        draw.text((x, y), "•  " + control, font=_font(23), fill=INK)
-    image.save(path, "PNG", dpi=(300, 300), optimize=True)
+    control_font = _font(PX_BODY)
+    for control in controls:
+        draw.text((MARGIN + 6, y), "•", font=control_font, fill=INK)
+        draw.text((MARGIN + 30, y), control, font=control_font, fill=INK)
+        y += int(PX_BODY * 1.32)
+
+    image = image.crop((0, 0, CANVAS_W, y + 10))
+    _save(image, path)
 
 
 def generate_claim_flow(path: Path) -> None:
-    width, height = 2400, 1160
-    image = Image.new("RGB", (width, height), PAPER)
+    image = Image.new("RGB", (CANVAS_W, 1000), WHITE)
     draw = ImageDraw.Draw(image)
-    _text_center(draw, (width // 2, 85), "Hospital Record and Claim Synchronization", 34, bold=True)
 
-    boxes = [
-        ("Clinical Event", "Prescription or diagnostic report", 220),
-        ("FHIR R4 Mapping", "MedicationRequest or DiagnosticReport", 810),
-        ("ABDM Care Context", "Consent and trace log", 1400),
-        ("Itemized Bill", "Hospital ledger", 1990),
+    y = MARGIN
+    steps = [
+        ("1  Clinical event", "Prescription or diagnostic report"),
+        ("2  FHIR R4 mapping", "MedicationRequest or DiagnosticReport"),
+        ("3  Care context", "Consent artifact and integration trace"),
+        ("4  Itemized bill", "Description and amount line items"),
+        ("5  FHIR Claim resource", "Status set to SUBMITTED"),
     ]
-    for title, sub, left in boxes:
-        _rounded(draw, (left, 180, left + 200, 320), LIGHT)
-        _text_center(draw, (left + 100, 225), title, 24, bold=True)
-        _text_center(draw, (left + 100, 280), sub, 18)
-    for i in range(len(boxes) - 1):
-        _arrow(draw, (boxes[i][2] + 200, 250), (boxes[i + 1][2] - 10, 250), width=5)
+    step_h = 70
+    for title, detail in steps:
+        _box(draw, MARGIN, y, BOX_W, step_h, title=title, detail=detail, fill=FILL)
+        y += step_h
+        if title != steps[-1][0]:
+            _arrow_down(draw, CANVAS_W // 2, y + 4, y + 34)
+            y += 38
 
-    _rounded(draw, (570, 440, 1830, 610), MID)
-    _text_center(draw, (1200, 495), "FHIR Claim Resource", 30, bold=True)
-    _text_center(draw, (1200, 555), "resourceType: Claim  |  itemized line entries  |  bill total", 24)
-    _arrow(draw, (2090, 320), (1810, 445), width=6)
+    y += 6
+    _box(draw, MARGIN, y, BOX_W, 74, title="Adjudication state machine", detail="Only defined transitions are accepted", fill=FILL_ACCENT)
+    y += 74
 
-    states = [("SUBMITTED", 420), ("ADJUDICATED", 900), ("APPROVED", 1380), ("REJECTED", 1860)]
-    for state, left in states:
-        _rounded(draw, (left, 720, left + 280, 820), MID if state not in ("APPROVED", "REJECTED") else DARK)
-        _text_center(draw, (left + 140, 770), state, 24, bold=True)
-    _arrow(draw, (700, 820), (895, 820), width=5)
-    _arrow(draw, (1180, 820), (1375, 820), width=5)
-    _arrow(draw, (1660, 820), (1855, 820), width=5)
+    chip_y = y + 30
+    chip_h = 56
+    chip_w = 196
+    x1 = MARGIN
+    x2 = MARGIN + chip_w + 46
+    x3 = MARGIN + 2 * (chip_w + 46)
+    _chip(draw, x1, chip_y, chip_w, chip_h, "SUBMITTED")
+    _arrow_right(draw, x1 + chip_w, x2, chip_y + chip_h // 2)
+    _chip(draw, x2, chip_y, chip_w, chip_h, "ADJUDICATED")
+    _arrow_right(draw, x2 + chip_w, x3 - 8, chip_y + chip_h // 2)
+    _chip(draw, x3, chip_y - 26, chip_w, chip_h, "APPROVED", fill=FILL_SOFT)
+    _chip(draw, x3, chip_y + 30, chip_w, chip_h, "REJECTED", fill=FILL_SOFT)
+    y = chip_y + chip_h + 56
 
-    _text_center(draw, (width // 2, 920), "Transition validation and outcome", 28, bold=True)
-    rules = [
-        "Only valid state transitions accepted",
-        "Administrative adjudication produces decision",
-        "Insurer note and out-of-pocket estimate persisted",
-        "Simulated NHCX exchange is logged for audit",
-    ]
-    for i, rule in enumerate(rules):
-        col = i % 2
-        row = i // 2
-        x = 390 if col == 0 else 1330
-        y = 975 + row * 55
-        draw.text((x, y), "•  " + rule, font=_font(23), fill=INK)
-    image.save(path, "PNG", dpi=(300, 300), optimize=True)
+    _note(draw, y, "Invalid transitions raise errors; the decision note and out-of-pocket estimate are persisted.")
+    y += 34
+    _note(draw, y, "The NHCX exchange is locally simulated and logged for audit.")
+    y += 30
+
+    image = image.crop((0, 0, CANVAS_W, y + 8))
+    _save(image, path)
 
 
 def main() -> None:
@@ -187,7 +311,8 @@ def main() -> None:
     generate_emergency_flow(FIGURES / "emergency_flow.png")
     generate_claim_flow(FIGURES / "claim_flow.png")
     for path in sorted(FIGURES.glob("*.png")):
-        print(path)
+        with Image.open(path) as image:
+            print(f"{path} {image.size[0]}x{image.size[1]}")
 
 
 if __name__ == "__main__":

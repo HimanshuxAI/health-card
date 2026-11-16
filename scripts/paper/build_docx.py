@@ -1,7 +1,8 @@
-"""Build the final IJIRT-style DOCX from the manuscript and template."""
+"""Build the final IJIRT-style DOCX from the manuscript and base document."""
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -15,13 +16,19 @@ from docx.shared import Inches, Pt, RGBColor
 
 ROOT = Path(__file__).resolve().parents[2]
 MANUSCRIPT = ROOT / "docs" / "paper" / "manuscript.md"
-TEMPLATE = Path("/Users/himanshu/Downloads/ijirt_paperformat.docx")
+# Base document: env var → committed copy → old Downloads location (fallback)
+BASE_DOCX = (
+    Path(os.environ["IJIRT_BASE_DOCX"])
+    if "IJIRT_BASE_DOCX" in os.environ
+    else (ROOT / "docs" / "paper" / "ijirt_base.docx" if (ROOT / "docs" / "paper" / "ijirt_base.docx").exists() else Path("/Users/himanshu/Downloads/ijirt_paperformat.docx"))
+)
 OUTPUT = ROOT / "IJIRT_ABHA_Health_Card_Paper.docx"
 REFERENCES = ROOT / "docs" / "paper" / "references.json"
 
+COLUMN_WIDTH_IN = 3.0  # IJIRT column measure (US Letter, 1in margins, 0.5in gutter)
+
 
 def _clear_body(doc: Document) -> None:
-    """Remove template instruction content while retaining document resources."""
     body = doc.element.body
     for child in list(body):
         if child.tag != qn("w:sectPr"):
@@ -52,6 +59,56 @@ def _style_section(section, *, count: int = 1, start_type=None) -> None:
     _set_columns(section, count, 360)
 
 
+def _add_ijirt_header_footer(doc: Document) -> None:
+    """Add IJIRT running head and footer to all sections."""
+    for section in doc.sections:
+        # Header: right-aligned journal/ISSN line, 9pt sans
+        hdr = section.header
+        hdr.is_linked_to_previous = False
+        hdr_para = hdr.paragraphs[0] if hdr.paragraphs else hdr.add_paragraph()
+        hdr_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        hdr_para.paragraph_format.space_before = Pt(0)
+        hdr_para.paragraph_format.space_after = Pt(0)
+        hdr_para.paragraph_format.line_spacing = 1.0
+        run = hdr_para.add_run("© May 2020 | IJIRT | Volume 6 Issue 12 | ISSN: 2349-6002")
+        run.font.name = "Arial"
+        run.font.size = Pt(9)
+
+        # Footer: left paper ID, centre journal, right page number
+        ftr = section.footer
+        ftr.is_linked_to_previous = False
+        ftr_para = ftr.paragraphs[0] if ftr.paragraphs else ftr.add_paragraph()
+        ftr_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        ftr_para.paragraph_format.space_before = Pt(0)
+        ftr_para.paragraph_format.space_after = Pt(0)
+        ftr_para.paragraph_format.line_spacing = 1.0
+
+        # Left
+        run_l = ftr_para.add_run("IJIRT 140001")
+        run_l.font.name = "Times New Roman"
+        run_l.font.size = Pt(8)
+        run_l.bold = True
+        # Centre (tab)
+        run_c = ftr_para.add_run("\tINTERNATIONAL JOURNAL OF INNOVATIVE RESEARCH IN TECHNOLOGY")
+        run_c.font.name = "Times New Roman"
+        run_c.font.size = Pt(8)
+        run_c.bold = True
+        # Right (tab) + page field
+        run_r = ftr_para.add_run("\t")
+        run_r.font.name = "Times New Roman"
+        run_r.font.size = Pt(8)
+        run_r.bold = True
+        # Page number field
+        fld = OxmlElement("w:fldSimple")
+        fld.set(qn("w:instr"), "PAGE")
+        fld.set(qn("w:fldLock"), "0")
+        run_page = ftr_para.add_run()
+        run_page._element.append(fld)
+        run_page.font.name = "Times New Roman"
+        run_page.font.size = Pt(8)
+        run_page.bold = True
+
+
 def _add_run(paragraph, text: str, *, size: float, bold: bool = False, italic: bool = False, color=None) -> None:
     run = paragraph.add_run(text)
     run.font.name = "Times New Roman"
@@ -64,7 +121,6 @@ def _add_run(paragraph, text: str, *, size: float, bold: bool = False, italic: b
 
 
 def _add_inline(paragraph, text: str, *, size: float, bold: bool = False, italic: bool = False) -> None:
-    """Add basic bold/italic/code inline markdown."""
     text = text.replace("“", "“").replace("”", "”").replace("’", "’")
     pattern = re.compile(r"(\*\*(?P<bold>.+?)\*\*|\*(?P<italic>.+?)\*|`(?P<code>.+?)`)")
     pos = 0
@@ -102,10 +158,12 @@ def _add_centered(doc, text: str, *, size: float, bold: bool = False, italic: bo
 def _add_heading(doc, text: str, level: int) -> None:
     text = text.strip()
     if level == 2:
-        paragraph = _add_centered(doc, text, size=10, bold=False, space_after=6)
+        # IJIRT section: centered, uppercase, 10pt plain
+        paragraph = _add_centered(doc, text.upper(), size=10, bold=False, space_after=6)
         paragraph.paragraph_format.space_before = Pt(8)
         paragraph.paragraph_format.keep_with_next = True
     else:
+        # IJIRT subsection: left, italic, 10pt
         paragraph = _add_paragraph(doc, text, size=10, align=WD_ALIGN_PARAGRAPH.LEFT, italic=True, space_after=4, indent_first=0)
         paragraph.paragraph_format.space_before = Pt(4)
         paragraph.paragraph_format.keep_with_next = True
@@ -136,41 +194,103 @@ def _set_table_borders(table) -> None:
     tbl_pr.append(borders)
 
 
-def _add_table(doc, caption: str, rows: list[list[str]]) -> None:
-    caption_paragraph = _add_centered(doc, caption, size=8, bold=True, space_after=2)
+def _set_cell_shading(cell, color: str) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), color)
+    tc_pr.append(shd)
+
+
+def _set_row_cant_split(row) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    cant_split = OxmlElement("w:cantSplit")
+    tr_pr.append(cant_split)
+
+
+def _set_header_row_repeat(table) -> None:
+    tbl_pr = table._tbl.tblPr
+    tbl_header = OxmlElement("w:tblHeader")
+    tbl_pr.append(tbl_header)
+
+
+def _add_table(doc, caption: str, rows: list[list[str]], col_widths: list[float] | None = None) -> None:
+    """Add a table with IJIRT formatting: caption above, 8pt body, bold header, grey header fill, full grid."""
+    # Caption above table (centred, bold, uppercase, 9pt)
+    caption_paragraph = _add_centered(doc, caption.upper(), size=9, bold=True, space_after=2)
     caption_paragraph.paragraph_format.keep_with_next = True
+
     table = doc.add_table(rows=len(rows), cols=len(rows[0]))
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.autofit = True
+    table.autofit = False
     _set_table_borders(table)
+    _set_header_row_repeat(table)
+
+    if col_widths:
+        # Override the table grid columns (w:tblGrid/w:gridCol) to the exact widths
+        # This is what Word actually uses for column layout when cells don't have tcW
+        tbl = table._tbl
+        grid = tbl.find(qn("w:tblGrid"))
+        if grid is not None:
+            # Remove existing gridCol elements
+            for gc in list(grid.findall(qn("w:gridCol"))):
+                grid.remove(gc)
+            # Add new ones with our widths in twips (1 inch = 1440 twips)
+            for w_in in col_widths:
+                gc = OxmlElement("w:gridCol")
+                gc.set(qn("w:w"), str(int(w_in * 1440)))
+                grid.append(gc)
+        # Also set tcW on header row cells to be safe
+        twips_per_inch = 1440
+        for i, w_in in enumerate(col_widths):
+            if i < len(table.rows[0].cells):
+                cell = table.rows[0].cells[i]
+                tc_pr = cell._tc.get_or_add_tcPr()
+                tcW = tc_pr.find(qn("w:tcW"))
+                if tcW is None:
+                    tcW = OxmlElement("w:tcW")
+                    tc_pr.append(tcW)
+                tcW.set(qn("w:w"), str(int(w_in * twips_per_inch)))
+                tcW.set(qn("w:type"), "dxa")
+
     for row_idx, row in enumerate(rows):
         for col_idx, value in enumerate(row):
             cell = table.cell(row_idx, col_idx)
             cell.text = ""
             paragraph = cell.paragraphs[0]
-            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT if row_idx > 0 else WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
             paragraph.paragraph_format.space_after = Pt(0)
+            paragraph.paragraph_format.space_before = Pt(0)
             paragraph.paragraph_format.line_spacing = 1.0
             _add_inline(paragraph, value, size=8, bold=(row_idx == 0))
-    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+            if row_idx == 0:
+                _set_cell_shading(cell, "E8E8E8")
+        if row_idx == 0:
+            _set_row_cant_split(table.rows[0])
+
+    # Small gap after table
+    gap = doc.add_paragraph()
+    gap.paragraph_format.space_after = Pt(2)
+    gap.paragraph_format.space_before = Pt(0)
 
 
-def _add_image(doc, caption: str, image_path: Path, *, fullwidth: bool = False) -> None:
-    section = doc.add_section(WD_SECTION.CONTINUOUS)
-    _style_section(section, count=1)
-    picture_paragraph = doc.add_paragraph()
-    picture_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    picture_paragraph.paragraph_format.space_after = Pt(2)
-    picture_paragraph.paragraph_format.space_before = Pt(4)
-    run = picture_paragraph.add_run()
-    run.add_picture(str(image_path), width=Inches(6.25) if fullwidth else Inches(3.1))
-    caption_paragraph = _add_centered(doc, caption, size=8, italic=False, space_after=8)
-    caption_paragraph.paragraph_format.keep_together = True
-    back = doc.add_section(WD_SECTION.CONTINUOUS)
-    _style_section(back, count=2)
+def _add_image_inline(doc, caption: str, image_path: Path) -> None:
+    """Insert figure at column width (3.0 in) inline in two-column flow, caption below."""
+    para = doc.add_paragraph()
+    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    para.paragraph_format.space_before = Pt(6)
+    para.paragraph_format.space_after = Pt(0)
+    run = para.add_run()
+    run.add_picture(str(image_path), width=Inches(COLUMN_WIDTH_IN))
+
+    caption_para = _add_centered(doc, caption, size=8, italic=False, space_after=8)
+    caption_para.paragraph_format.keep_with_next = True
+    caption_para.paragraph_format.keep_together = True
 
 
 def _add_equation(doc, equation: str) -> None:
+    """Equation rendered as a 2-column layout table (per IJIRT LaTeX)."""
     table = doc.add_table(rows=1, cols=2)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
@@ -214,7 +334,6 @@ def _parse_rows(block: str) -> list[list[str]]:
 
 
 def _blocks(md: str):
-    """Split body into simple blocks: heading, paragraph, image, table, bullet, ordered, equation."""
     lines = md.splitlines()
     blocks: list[tuple[str, object]] = []
     paragraph: list[str] = []
@@ -268,16 +387,18 @@ def _blocks(md: str):
 
 def build() -> None:
     front, body = _parse_frontmatter(MANUSCRIPT.read_text(encoding="utf-8"))
-    doc = Document(str(TEMPLATE))
+    doc = Document(str(BASE_DOCX))
     _clear_body(doc)
 
-    # Word stores the first section in section[0]. Keep it one-column for the title/abstract block.
+    # Exactly two sections: one-col title/abstract, continuous break to two-col body
     _style_section(doc.sections[0], count=1, start_type=None)
 
+    # Title block
     _add_centered(doc, front["title"], size=20, bold=False, space_after=8)
     _add_centered(doc, front["authors"], size=11, bold=False, space_after=4)
     _add_centered(doc, front["affiliations"], size=11, italic=True, space_after=10)
 
+    # Abstract
     abstract = doc.add_paragraph()
     abstract.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     abstract.paragraph_format.space_after = Pt(6)
@@ -285,6 +406,7 @@ def build() -> None:
     _add_run(abstract, "Abstract—", size=9, bold=True, italic=True)
     _add_inline(abstract, front["abstract"], size=9)
 
+    # Index Terms
     index = doc.add_paragraph()
     index.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     index.paragraph_format.space_after = Pt(6)
@@ -292,9 +414,24 @@ def build() -> None:
     _add_run(index, "Index Terms—", size=9, bold=True, italic=True)
     _add_inline(index, front["index_terms"], size=9)
 
-    # Start the two-column manuscript body on a continuous section.
+    # Two-column body
     body_section = doc.add_section(WD_SECTION.CONTINUOUS)
     _style_section(body_section, count=2)
+
+    # Add IJIRT header/footer to all sections
+    _add_ijirt_header_footer(doc)
+
+    # Column widths for the six tables (sum = 3.0 in), keyed by Roman numeral
+    TABLE_WIDTHS = {
+        "I": [0.65, 1.15, 1.20],
+        "II": [0.75, 1.25, 1.00],
+        "III": [1.00, 1.10, 0.90],
+        "IV": [1.30, 1.00, 0.70],
+        "V": [1.00, 1.00, 1.00],
+        "VI": [0.70, 1.30, 1.00],
+    }
+
+    table_counter = 0
 
     for kind, payload in _blocks(body):
         if kind == "heading2":
@@ -310,11 +447,14 @@ def build() -> None:
             _add_list_item(doc, text, ordered=True, number=number)
         elif kind == "table":
             rows = payload
-            _add_table(doc, "", rows)
+            table_counter += 1
+            roman = ["I", "II", "III", "IV", "V", "VI"][table_counter - 1]
+            caption = f"TABLE {roman}:"
+            col_w = TABLE_WIDTHS.get(roman, None)
+            _add_table(doc, caption, rows, col_widths=col_w)
         elif kind == "image":
             caption, image_path = payload
-            fullwidth = image_path.name in {"architecture.png", "claim_flow.png"}
-            _add_image(doc, caption, image_path, fullwidth=fullwidth)
+            _add_image_inline(doc, caption, image_path)
         elif kind == "equation":
             _add_equation(doc, payload)
 
