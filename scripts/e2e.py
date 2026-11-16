@@ -6,6 +6,7 @@ Flow: patient login -> hospital login -> resolve emergency token -> create recor
 """
 
 import json
+import os
 import sys
 import httpx
 
@@ -16,6 +17,14 @@ BASE = {
     "nhcx": "http://127.0.0.1:8004",
     "sos": "http://127.0.0.1:8005",
 }
+
+# Set E2E_BASE to run against a deployment that puts every service behind one
+# address, such as the single-container image in deploy/allinone:
+#
+#   E2E_BASE=https://example.code.run python scripts/e2e.py
+GATEWAY = os.getenv("E2E_BASE")
+if GATEWAY:
+    BASE = {svc: f"{GATEWAY.rstrip('/')}/api/{svc}" for svc in BASE}
 
 STEPS: list[tuple[str, bool]] = []
 

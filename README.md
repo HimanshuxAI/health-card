@@ -207,6 +207,56 @@ gateway configuration to the host, pulls the images for that commit and starts t
 If the secrets are not set the workflow reports that it has nothing to do and exits, so the
 repository stays usable without a host.
 
+### The whole stack in one container
+
+Some hosts give a single service and a single volume rather than a compose file. For those,
+`deploy/allinone/Dockerfile` packs the five services, the frontend and the gateway into one image,
+with the SQLite files on one mounted volume.
+
+It is published to GHCR as `ghcr.io/<owner>/health-card-allinone` on every push to `main`.
+
+```bash
+docker build -f deploy/allinone/Dockerfile -t health-card-allinone .
+docker run -p 8080:80 -v health-card-data:/data health-card-allinone
+```
+
+Then open `http://localhost:8080`. The smoke test can be pointed at it, which also works against a
+deployed instance:
+
+```bash
+E2E_BASE=http://localhost:8080 .venv/bin/python scripts/e2e.py
+```
+
+Supervisord runs the seed once at startup and then the five services, the frontend and nginx. The
+seed is idempotent, so a restart re-uses the database on the volume instead of replacing it, and a
+card that was already printed keeps working.
+
+### Northflank: a free host that keeps a volume
+
+Northflank's free Sandbox tier is the one free tier left that suits this app: two services, one
+database, persistent volumes, and compute that does not sleep. Its docs say it is not meant for
+production, so treat it as a demo host.
+
+1. Create an account at `app.northflank.com`. The free Sandbox does not ask for a card.
+2. Create a project, then a service, and choose **Deploy from an external registry** with the
+   image `ghcr.io/<owner>/health-card-allinone:latest`.
+3. Set the public port to `80`.
+4. Add a volume mounted at `/data`, so the five SQLite files survive a restart.
+5. Give it 1 vCPU and 1 GB. At Northflank's rates that is about $18 a month of usage, which the
+   $20 monthly free allowance covers.
+
+The service comes back with an HTTPS address on `code.run`. Set `E2E_BASE` to that address and run
+the smoke test against the live deployment:
+
+```bash
+E2E_BASE=https://<name>.code.run .venv/bin/python scripts/e2e.py
+```
+
+A GHCR package is private by default, and Northflank cannot pull a private image without a
+credential. Either make the `health-card-allinone` package public under the repository's package
+settings, or add a registry credential in Northflank for `ghcr.io` using a GitHub token with
+`read:packages`.
+
 ### A permanent public address, for free
 
 The stack listens on port 80. Publishing that port on a stable address needs something in front

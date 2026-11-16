@@ -12,6 +12,11 @@ const localPorts: Record<string, string> = {
 };
 
 const nextConfig: NextConfig = {
+  // The single-container deployment in deploy/allinone runs the server from
+  // Next's standalone output, which carries only the files it needs. The
+  // default build is unchanged for every other deployment.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
+
   async rewrites() {
     return Object.entries(localPorts).map(([service, base]) => ({
       source: `/api/${service}/:path*`,
