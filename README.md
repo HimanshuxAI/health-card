@@ -15,6 +15,11 @@ The system is built against two Indian health interoperability standards:
 Both gateways are simulated inside this repository. The endpoints follow the real shapes, but no
 government sandbox is called, so the project runs with no external dependency.
 
+## Live demo
+
+The project site, with the architecture diagram and the run instructions, is published at
+https://himanshuxai.github.io/health-card/
+
 ---
 
 ## Contents
