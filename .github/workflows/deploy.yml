@@ -10,15 +10,18 @@ name: Deploy
 #        echo "deploy ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/deploy
 #   2. Authorise your key:
 #        echo "<public key>" >> ~/.ssh/authorized_keys
-#   3. Copy the compose file and the gateway configuration there:
-#        scp docker-compose.ghcr.yml gateway/nginx.conf deploy@host:/srv/health-card/
+#   3. Make a directory for the deployment:
+#        sudo mkdir -p /srv/health-card/gateway
 #
 # Repository secrets:
 #
 #   DEPLOY_HOST          host name or address
+#   DEPLOY_SSH_KEY       private key, in PEM format
+#
+# Repository variables:
+#
 #   DEPLOY_USER          ssh user (default: deploy)
 #   DEPLOY_PORT          ssh port (default: 22)
-#   DEPLOY_SSH_KEY       private key, in PEM format
 #   DEPLOY_PATH          directory on the host (default: /srv/health-card)
 
 on:
@@ -27,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Image tag to deploy (default: the commit sha)
+        description: "Image tag to deploy (default: the commit sha)"
         required: false
 
 permissions:
@@ -45,58 +48,61 @@ jobs:
     name: Deploy to the host
     runs-on: ubuntu-latest
     environment: production
+    # Secrets cannot be used in an "if" condition, so they are read into the
+    # environment here and the steps below test the environment variables.
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER || 'deploy' }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || '22' }}
     steps:
       - name: Check that the deployment is configured
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          if [ -z "$HOST" ] || [ -z "$KEY" ]; then
+          if [ -z "$DEPLOY_HOST" ] || [ -z "$DEPLOY_SSH_KEY" ]; then
             echo "::notice::DEPLOY_HOST and DEPLOY_SSH_KEY are not set, skipping the deployment."
-            exit 0
+          else
+            echo "Deploying to $DEPLOY_HOST as $DEPLOY_USER."
           fi
 
       - name: Set up SSH
-        if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_SSH_KEY != '' }}
-        env:
-          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        if: ${{ env.DEPLOY_HOST != '' && env.DEPLOY_SSH_KEY != '' }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "${{ secrets.DEPLOY_HOST }}" > ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<'EOF'
+          cat > ~/.ssh/config <<EOF
           Host deploy-target
-            HostName __HOST__
-            User __USER__
-            Port __PORT__
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
             IdentityFile ~/.ssh/deploy_key
             StrictHostKeyChecking accept-new
           EOF
-          sed -i "s|__HOST__|${{ secrets.DEPLOY_HOST }}|; s|__USER__|${{ vars.DEPLOY_USER || 'deploy' }}|; s|__PORT__|${{ vars.DEPLOY_PORT || '22' }}|" ~/.ssh/config
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
       - name: Copy the deployment files
-        if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_SSH_KEY != '' }}
+        if: ${{ env.DEPLOY_HOST != '' && env.DEPLOY_SSH_KEY != '' }}
         run: |
           ssh deploy-target "mkdir -p '$DEPLOY_PATH/gateway'"
           scp docker-compose.ghcr.yml "deploy-target:$DEPLOY_PATH/docker-compose.ghcr.yml"
           scp gateway/nginx.conf "deploy-target:$DEPLOY_PATH/gateway/nginx.conf"
 
       - name: Pull and start the stack
-        if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_SSH_KEY != '' }}
+        if: ${{ env.DEPLOY_HOST != '' && env.DEPLOY_SSH_KEY != '' }}
         env:
           TAG: ${{ inputs.tag || github.sha }}
         run: |
           ssh deploy-target "cd '$DEPLOY_PATH' && ABHA_TAG='$TAG' docker compose -f docker-compose.ghcr.yml pull && ABHA_TAG='$TAG' docker compose -f docker-compose.ghcr.yml up -d --remove-orphans"
 
       - name: Check that the services came up
-        if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_SSH_KEY != '' }}
+        if: ${{ env.DEPLOY_HOST != '' && env.DEPLOY_SSH_KEY != '' }}
         run: |
           ssh deploy-target "cd '$DEPLOY_PATH' && docker compose -f docker-compose.ghcr.yml ps"
           ssh deploy-target "curl -fsS -o /dev/null -w 'landing: %{http_code}\n' http://localhost/"
 
       - name: Report
-        if: ${{ secrets.DEPLOY_HOST != '' && secrets.DEPLOY_SSH_KEY != '' }}
+        if: ${{ env.DEPLOY_HOST != '' && env.DEPLOY_SSH_KEY != '' }}
         run: |
-          echo "Deployed ${{ inputs.tag || github.sha }} to ${{ secrets.DEPLOY_HOST }}."
-          echo "Public address: http://${{ secrets.DEPLOY_HOST }}/"
+          echo "Deployed ${{ inputs.tag || github.sha }} to $DEPLOY_HOST."
+          echo "Public address: http://$DEPLOY_HOST/"

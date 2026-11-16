@@ -238,7 +238,7 @@ changes on every restart.
 
 | Agent | What it does |
 |---|---|
-| `com.abha.healthcard.keepalive` | Restarts the Docker stack and the tunnel when either one stops, and writes the current public address to `~/.local/state/health-card/public-url.txt` |
+| `com.abha.healthcard.keepalive` | Checks every service of the stack and starts the ones that stopped, restarts the tunnel when its process dies, and writes the current public address to `~/.local/state/health-card/public-url.txt` |
 | `com.abha.healthcard.caffeinate` | Stops the Mac from sleeping while it serves the app |
 
 ```bash
@@ -248,6 +248,10 @@ launchctl list | grep com.abha.healthcard
 
 The agents start at login. macOS does not let a launchd job read anything inside `~/Documents`,
 so the installer copies the files the watchdog needs into `~/.local/share/health-card`.
+
+The watchdog looks at every service, not only at the gateway. The gateway can keep answering
+while the service behind it is gone, so a check that only looks at the gateway misses a stack
+that is half up.
 
 ### Project site
 
@@ -263,7 +267,7 @@ The workflow is `.github/workflows/pages.yml` and it publishes the `site/` direc
 ```bash
 .venv/bin/python -m pytest                        # 22 unit and integration tests
 .venv/bin/python scripts/e2e.py                   # 16-step live smoke test, services must be running
-cd frontend && npm test                           # 16 frontend tests (vitest)
+cd frontend && npm test                           # 17 frontend tests (vitest)
 cd frontend && npx next typegen && npx tsc --noEmit
 ```
 
@@ -273,7 +277,8 @@ submission, adjudication, an SOS alert and the ABDM trace.
 
 The frontend tests cover the QR path: the token helpers, the camera component, and a check that
 the code printed on the card keeps its four-module quiet zone and decodes back to the scan
-address with a standard decoder.
+address with a standard decoder. One test also covers a browser that has stopped handing out
+animation frames, which used to stall the camera scan.
 
 ---
 
