@@ -88,6 +88,23 @@ describe("QrScanner", () => {
     expect(mockedJsQr.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("keeps reading frames when the browser stops handing out animation frames", async () => {
+    // A browser stops calling requestAnimationFrame when its window is not
+    // focused. The scan must not depend on it.
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation(() => 0);
+    const { stream } = fakeStream();
+    mockCamera(stream);
+    mockedJsQr.mockReturnValue({ data: "token-unfocused" } as never);
+
+    const onDetected = vi.fn();
+    render(<QrScanner onDetected={onDetected} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /scan with camera/i }));
+
+    await waitFor(() => expect(onDetected).toHaveBeenCalledWith("token-unfocused"));
+    raf.mockRestore();
+  });
+
   it("explains a refused camera permission and offers the manual fallback", async () => {
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,

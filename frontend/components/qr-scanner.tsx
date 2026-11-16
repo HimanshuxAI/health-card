@@ -11,6 +11,9 @@ type QrScannerProps = {
 
 type CameraState = "idle" | "starting" | "running" | "failed";
 
+/** How often the frame is read and handed to the decoder, in milliseconds. */
+const SCAN_INTERVAL_MS = 100;
+
 /**
  * Reads a QR code with the device camera.
  *
@@ -23,14 +26,14 @@ export function QrScanner({ onDetected }: QrScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<CameraState>("idle");
   const [error, setError] = useState("");
 
   const release = useCallback(() => {
-    if (frameRef.current !== null) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
     const stream = streamRef.current;
     if (stream) {
@@ -84,9 +87,14 @@ export function QrScanner({ onDetected }: QrScannerProps) {
             return;
           }
         }
-        frameRef.current = requestAnimationFrame(read);
+        // The next read is scheduled with a timer rather than with
+        // requestAnimationFrame. A browser stops handing out animation frames
+        // when its window is not focused, which would silently stall the scan
+        // and leave the camera running with nothing happening. A timer keeps
+        // reading frames at a steady rate whatever the window is doing.
+        timerRef.current = setTimeout(read, SCAN_INTERVAL_MS);
       };
-      frameRef.current = requestAnimationFrame(read);
+      timerRef.current = setTimeout(read, 0);
     } catch (e) {
       release();
       setState("failed");
