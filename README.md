@@ -189,8 +189,9 @@ docker compose -f docker-compose.ghcr.yml up -d
 ### Project site
 
 A short description of the system, with the architecture diagram and the run instructions, is
-published to GitHub Pages from the `site/` directory. The workflow is
-`.github/workflows/pages.yml`.
+published to GitHub Pages: <https://himanshuxai.github.io/health-card/>
+
+The workflow is `.github/workflows/pages.yml` and it publishes the `site/` directory.
 
 ---
 
