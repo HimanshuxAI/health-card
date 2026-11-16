@@ -59,54 +59,171 @@ def _style_section(section, *, count: int = 1, start_type=None) -> None:
     _set_columns(section, count, 360)
 
 
-def _add_ijirt_header_footer(doc: Document) -> None:
-    """Add IJIRT running head and footer to all sections."""
-    for section in doc.sections:
-        # Header: right-aligned journal/ISSN line, 9pt sans
-        hdr = section.header
-        hdr.is_linked_to_previous = False
-        hdr_para = hdr.paragraphs[0] if hdr.paragraphs else hdr.add_paragraph()
-        hdr_para.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        hdr_para.paragraph_format.space_before = Pt(0)
-        hdr_para.paragraph_format.space_after = Pt(0)
-        hdr_para.paragraph_format.line_spacing = 1.0
-        run = hdr_para.add_run("© May 2020 | IJIRT | Volume 6 Issue 12 | ISSN: 2349-6002")
-        run.font.name = "Arial"
-        run.font.size = Pt(9)
+def _create_independent_header_footer(section, is_first_section: bool) -> None:
+    """Create independent header/footer parts for a section."""
+    if not is_first_section:
+        # For subsequent sections, we need to create new header/footer parts
+        # by breaking the link to previous
+        section.header.is_linked_to_previous = False
+        section.footer.is_linked_to_previous = False
+        # Force creation of new header/footer parts by accessing them
+        _ = section.header.part
+        _ = section.footer.part
 
-        # Footer: left paper ID, centre journal, right page number
-        ftr = section.footer
-        ftr.is_linked_to_previous = False
-        ftr_para = ftr.paragraphs[0] if ftr.paragraphs else ftr.add_paragraph()
-        ftr_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        ftr_para.paragraph_format.space_before = Pt(0)
-        ftr_para.paragraph_format.space_after = Pt(0)
-        ftr_para.paragraph_format.line_spacing = 1.0
+    # Now clear and populate
+    for part_el in (section.header._element, section.footer._element):
+        for child in list(part_el):
+            if child.tag.endswith('}p') or child.tag.endswith('}tbl'):
+                part_el.remove(child)
 
-        # Left
-        run_l = ftr_para.add_run("IJIRT 140001")
-        run_l.font.name = "Times New Roman"
-        run_l.font.size = Pt(8)
-        run_l.bold = True
-        # Centre (tab)
-        run_c = ftr_para.add_run("\tINTERNATIONAL JOURNAL OF INNOVATIVE RESEARCH IN TECHNOLOGY")
-        run_c.font.name = "Times New Roman"
-        run_c.font.size = Pt(8)
-        run_c.bold = True
-        # Right (tab) + page field
-        run_r = ftr_para.add_run("\t")
-        run_r.font.name = "Times New Roman"
-        run_r.font.size = Pt(8)
-        run_r.bold = True
-        # Page number field
-        fld = OxmlElement("w:fldSimple")
-        fld.set(qn("w:instr"), "PAGE")
-        fld.set(qn("w:fldLock"), "0")
-        run_page = ftr_para.add_run()
-        run_page._element.append(fld)
-        run_page.font.name = "Times New Roman"
-        run_page.font.size = Pt(8)
-        run_page.bold = True
+    # Header paragraph
+    hdr_p = OxmlElement("w:p")
+    hdr_pPr = OxmlElement("w:pPr")
+    hdr_jc = OxmlElement("w:jc")
+    hdr_jc.set(qn("w:val"), "right")
+    hdr_pPr.append(hdr_jc)
+    hdr_spacing = OxmlElement("w:spacing")
+    hdr_spacing.set(qn("w:before"), "0")
+    hdr_spacing.set(qn("w:after"), "0")
+    hdr_spacing.set(qn("w:line"), "240")
+    hdr_spacing.set(qn("w:lineRule"), "auto")
+    hdr_pPr.append(hdr_spacing)
+    hdr_p.append(hdr_pPr)
+    hdr_r = OxmlElement("w:r")
+    hdr_rPr = OxmlElement("w:rPr")
+    hdr_rFonts = OxmlElement("w:rFonts")
+    hdr_rFonts.set(qn("w:ascii"), "Arial")
+    hdr_rFonts.set(qn("w:hAnsi"), "Arial")
+    hdr_rFonts.set(qn("w:cs"), "Arial")
+    hdr_rFonts.set(qn("w:eastAsia"), "Arial")
+    hdr_rPr.append(hdr_rFonts)
+    hdr_sz = OxmlElement("w:sz")
+    hdr_sz.set(qn("w:val"), "18")
+    hdr_rPr.append(hdr_sz)
+    hdr_r.append(hdr_rPr)
+    hdr_t = OxmlElement("w:t")
+    hdr_t.text = "© May 2020 | IJIRT | Volume 6 Issue 12 | ISSN: 2349-6002"
+    hdr_r.append(hdr_t)
+    hdr_p.append(hdr_r)
+    section.header._element.append(hdr_p)
+
+    # Footer paragraph
+    ftr_p = OxmlElement("w:p")
+    ftr_pPr = OxmlElement("w:pPr")
+    ftr_spacing = OxmlElement("w:spacing")
+    ftr_spacing.set(qn("w:before"), "0")
+    ftr_spacing.set(qn("w:after"), "0")
+    ftr_spacing.set(qn("w:line"), "240")
+    ftr_spacing.set(qn("w:lineRule"), "auto")
+    ftr_pPr.append(ftr_spacing)
+    ftr_p.append(ftr_pPr)
+
+    # Left: IJIRT 140001
+    ftr_r1 = OxmlElement("w:r")
+    ftr_r1Pr = OxmlElement("w:rPr")
+    ftr_r1Fonts = OxmlElement("w:rFonts")
+    ftr_r1Fonts.set(qn("w:ascii"), "Times New Roman")
+    ftr_r1Fonts.set(qn("w:hAnsi"), "Times New Roman")
+    ftr_r1Fonts.set(qn("w:cs"), "Times New Roman")
+    ftr_r1Fonts.set(qn("w:eastAsia"), "Times New Roman")
+    ftr_r1Pr.append(ftr_r1Fonts)
+    ftr_r1Sz = OxmlElement("w:sz")
+    ftr_r1Sz.set(qn("w:val"), "16")
+    ftr_r1Pr.append(ftr_r1Sz)
+    ftr_r1B = OxmlElement("w:b")
+    ftr_r1Pr.append(ftr_r1B)
+    ftr_r1.append(ftr_r1Pr)
+    ftr_t1 = OxmlElement("w:t")
+    ftr_t1.text = "IJIRT 140001"
+    ftr_r1.append(ftr_t1)
+    ftr_p.append(ftr_r1)
+
+    # Tab 1
+    ftr_rTab1 = OxmlElement("w:r")
+    ftr_rTab1Pr = OxmlElement("w:rPr")
+    ftr_rTab1Fonts = OxmlElement("w:rFonts")
+    ftr_rTab1Fonts.set(qn("w:ascii"), "Times New Roman")
+    ftr_rTab1Fonts.set(qn("w:hAnsi"), "Times New Roman")
+    ftr_rTab1Fonts.set(qn("w:cs"), "Times New Roman")
+    ftr_rTab1Fonts.set(qn("w:eastAsia"), "Times New Roman")
+    ftr_rTab1Pr.append(ftr_rTab1Fonts)
+    ftr_rTab1Sz = OxmlElement("w:sz")
+    ftr_rTab1Sz.set(qn("w:val"), "16")
+    ftr_rTab1Pr.append(ftr_rTab1Sz)
+    ftr_rTab1B = OxmlElement("w:b")
+    ftr_rTab1Pr.append(ftr_rTab1B)
+    ftr_rTab1.append(ftr_rTab1Pr)
+    ftr_tab1 = OxmlElement("w:tab")
+    ftr_rTab1.append(ftr_tab1)
+    ftr_p.append(ftr_rTab1)
+
+    # Centre: Journal name
+    ftr_r2 = OxmlElement("w:r")
+    ftr_r2Pr = OxmlElement("w:rPr")
+    ftr_r2Fonts = OxmlElement("w:rFonts")
+    ftr_r2Fonts.set(qn("w:ascii"), "Times New Roman")
+    ftr_r2Fonts.set(qn("w:hAnsi"), "Times New Roman")
+    ftr_r2Fonts.set(qn("w:cs"), "Times New Roman")
+    ftr_r2Fonts.set(qn("w:eastAsia"), "Times New Roman")
+    ftr_r2Pr.append(ftr_r2Fonts)
+    ftr_r2Sz = OxmlElement("w:sz")
+    ftr_r2Sz.set(qn("w:val"), "16")
+    ftr_r2Pr.append(ftr_r2Sz)
+    ftr_r2B = OxmlElement("w:b")
+    ftr_r2Pr.append(ftr_r2B)
+    ftr_r2.append(ftr_r2Pr)
+    ftr_t2 = OxmlElement("w:t")
+    ftr_t2.text = "INTERNATIONAL JOURNAL OF INNOVATIVE RESEARCH IN TECHNOLOGY"
+    ftr_r2.append(ftr_t2)
+    ftr_p.append(ftr_r2)
+
+    # Tab 2
+    ftr_rTab2 = OxmlElement("w:r")
+    ftr_rTab2Pr = OxmlElement("w:rPr")
+    ftr_rTab2Fonts = OxmlElement("w:rFonts")
+    ftr_rTab2Fonts.set(qn("w:ascii"), "Times New Roman")
+    ftr_rTab2Fonts.set(qn("w:hAnsi"), "Times New Roman")
+    ftr_rTab2Fonts.set(qn("w:cs"), "Times New Roman")
+    ftr_rTab2Fonts.set(qn("w:eastAsia"), "Times New Roman")
+    ftr_rTab2Pr.append(ftr_rTab2Fonts)
+    ftr_rTab2Sz = OxmlElement("w:sz")
+    ftr_rTab2Sz.set(qn("w:val"), "16")
+    ftr_rTab2Pr.append(ftr_rTab2Sz)
+    ftr_rTab2B = OxmlElement("w:b")
+    ftr_rTab2Pr.append(ftr_rTab2B)
+    ftr_rTab2.append(ftr_rTab2Pr)
+    ftr_tab2 = OxmlElement("w:tab")
+    ftr_rTab2.append(ftr_tab2)
+    ftr_p.append(ftr_rTab2)
+
+    # Right: PAGE field
+    ftr_r3 = OxmlElement("w:r")
+    ftr_r3Pr = OxmlElement("w:rPr")
+    ftr_r3Fonts = OxmlElement("w:rFonts")
+    ftr_r3Fonts.set(qn("w:ascii"), "Times New Roman")
+    ftr_r3Fonts.set(qn("w:hAnsi"), "Times New Roman")
+    ftr_r3Fonts.set(qn("w:cs"), "Times New Roman")
+    ftr_r3Fonts.set(qn("w:eastAsia"), "Times New Roman")
+    ftr_r3Pr.append(ftr_r3Fonts)
+    ftr_r3Sz = OxmlElement("w:sz")
+    ftr_r3Sz.set(qn("w:val"), "16")
+    ftr_r3Pr.append(ftr_r3Sz)
+    ftr_r3B = OxmlElement("w:b")
+    ftr_r3Pr.append(ftr_r3B)
+    ftr_r3.append(ftr_r3Pr)
+    fld = OxmlElement("w:fldSimple")
+    fld.set(qn("w:instr"), "PAGE")
+    fld.set(qn("w:fldLock"), "0")
+    ftr_r3.append(fld)
+    ftr_p.append(ftr_r3)
+
+    section.footer._element.append(ftr_p)
+
+
+def _setup_ijirt_header_footer(doc: Document) -> None:
+    """Add IJIRT header/footer to ALL sections with independent parts."""
+    for i, section in enumerate(doc.sections):
+        _create_independent_header_footer(section, is_first_section=(i == 0))
 
 
 def _add_run(paragraph, text: str, *, size: float, bold: bool = False, italic: bool = False, color=None) -> None:
@@ -433,8 +550,16 @@ def _blocks(md: str):
 
 def build() -> None:
     front, body = _parse_frontmatter(MANUSCRIPT.read_text(encoding="utf-8"))
-    doc = Document(str(BASE_DOCX))
-    _clear_body(doc)
+    # Create fresh document to avoid base template corruption
+    doc = Document()
+
+    # Set default style font
+    style = doc.styles['Normal']
+    style.font.name = 'Times New Roman'
+    style.font.size = Pt(10)
+    style.paragraph_format.space_after = Pt(4)
+    style.paragraph_format.line_spacing = 1.0
+    style.paragraph_format.first_line_indent = Inches(0.18)
 
     # Exactly two sections: one-col title/abstract, continuous break to two-col body
     _style_section(doc.sections[0], count=1, start_type=None)
@@ -465,16 +590,16 @@ def build() -> None:
     _style_section(body_section, count=2)
 
     # Add IJIRT header/footer to all sections
-    _add_ijirt_header_footer(doc)
+    _setup_ijirt_header_footer(doc)
 
     # Column widths for the six tables (sum = 3.0 in), keyed by Roman numeral
     TABLE_WIDTHS = {
-        "I": [0.60, 1.20, 1.20],      # Requirement, Implemented mechanism, Evidence
-        "II": [0.75, 1.25, 1.00],     # Service, Principal responsibilities, Owned data
-        "III": [1.00, 1.10, 0.90],    # Control, Purpose, Validation result
-        "IV": [1.25, 1.05, 0.70],     # Evaluation item, Quantity/outcome, Context
-        "V": [1.00, 1.00, 1.00],      # Aspect, Related QR/mobile approaches, Proposed prototype
-        "VI": [0.65, 1.35, 1.00],     # Area, Representative endpoint, Purpose
+        "I": [0.60, 1.20, 1.20],      # Requirement, Impl. mechanism, Evidence
+        "II": [0.75, 1.25, 1.00],     # Service, Responsibilities, Owned data
+        "III": [1.00, 1.10, 0.90],    # Control, Purpose, Validation
+        "IV": [1.25, 1.05, 0.70],     # Evaluation item, Outcome, Context
+        "V": [0.60, 1.20, 1.20],      # Aspect, Related approaches, Proposed prototype
+        "VI": [0.65, 1.35, 1.00],     # Area, Endpoint, Purpose
     }
 
     table_counter = 0
