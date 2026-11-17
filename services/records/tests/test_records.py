@@ -124,6 +124,37 @@ def test_qr_card_stays_valid_until_it_is_regenerated():
     assert client.get(f"/emergency/resolve/{rotated}").status_code == 200
 
 
+def test_only_the_newest_card_resolves_after_repeated_rotation():
+    """Exactly one card may be active.
+
+    If rotation left an earlier token active, a card the patient believed they
+    had replaced would still open their trauma profile, and repeated reads
+    must not mint extra cards either.
+    """
+    headers, _ = _register("rotate@example.com")
+    client.put(
+        "/emergency/profile",
+        json={
+            "blood_group": "B+",
+            "allergies": [],
+            "chronic_conditions": [],
+            "medications": [],
+            "emergency_contacts": [],
+        },
+        headers=headers,
+    )
+
+    issued = [client.post("/emergency/qr", headers=headers).json()["token"] for _ in range(4)]
+    assert len(set(issued)) == 4, "each rotation must issue a new token"
+
+    # reading the card repeatedly must keep returning the newest one
+    for _ in range(3):
+        assert client.get("/emergency/qr", headers=headers).json()["token"] == issued[-1]
+
+    statuses = [client.get(f"/emergency/resolve/{t}").status_code for t in issued]
+    assert statuses == [410, 410, 410, 200], "only the newest card may resolve"
+
+
 def test_qr_card_requires_a_patient_account():
     headers, _ = _register("nurse@example.com")
     headers["Authorization"] = _claim(1, "hospital")["Authorization"]

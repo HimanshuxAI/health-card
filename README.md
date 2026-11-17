@@ -22,9 +22,10 @@ government sandbox is called, so the project runs with no external dependency.
 | The app | https://health-card-2856.onrender.com |
 | The project site | https://himanshuxai.github.io/health-card/ |
 
-The app runs on Render's free instance, which sleeps after 15 minutes without a request, so the
-first visit after a quiet spell takes up to a minute to wake. Sign in with any account from
-[Demo accounts](#demo-accounts); the password is `abha1234`.
+The app runs on Render's free instance, which sleeps after 15 minutes without a request. The first
+visit after a quiet spell waits for the wake-up, measured at 91 seconds; after that it answers in
+under a second. The address stays valid while it sleeps, so a scanned card still resolves. Sign in
+with any account from [Demo accounts](#demo-accounts); the password is `abha1234`.
 
 ---
 
@@ -255,7 +256,7 @@ What the Free plan gives and costs, in full:
 | Compute | 0.1 CPU, 512 MB RAM. The container measures 321 MB, so it fits. |
 | Card | Not required |
 | Persistent disk | **Not available on Free.** Disks are paid-only. |
-| Idle | Spins down after 15 minutes without a request, wakes in about a minute |
+| Idle | Spins down after 15 minutes without a request; measured 91 seconds to wake |
 | Hours | 750 instance hours a month; spun-down time does not count |
 
 The URL stays valid while the service is asleep, so a scanned card still resolves — the first
